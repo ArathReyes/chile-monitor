@@ -15,15 +15,13 @@ from monitor.sources import hacienda as h
 
 def run() -> str:
     conn = storage.connect()
-    try:
-        # refresh the calendar first so a same-day schedule change is honoured
-        try:
-            h.run_calendar(conn)
-        except Exception as e:  # noqa: BLE001
-            logging.warning("calendar refresh failed, using stored calendar: %s", e)
-        return h.watch(conn)
+    try:  # refresh the calendar first so a same-day schedule change is honoured
+        h.run_calendar(conn)
+    except Exception as e:  # noqa: BLE001
+        logging.warning("calendar refresh failed, using stored calendar: %s", e)
     finally:
         conn.close()
+    return h.watch()  # opens the database per poll
 
 
 def main() -> None:

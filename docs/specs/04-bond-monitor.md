@@ -1,6 +1,6 @@
 # Spec 04 — Bond Monitor tab
 
-Status: **in progress** (2026-11-15). Source: Prompt 5 (user). Runs after spec 03 (Curves & Rates).
+Status: **implemented** (2026-11-15). Source: Prompt 5 (user). Runs after spec 03 (Curves & Rates).
 
 ## Decisions taken during implementation (user, 2026-11-15)
 1. The provided `hacienda.py` / `test_hacienda.py` (in `scripts/`) were adapted into `src/monitor/sources/hacienda.py` and `tests/test_hacienda.py`. The originals stay in `scripts/` (untracked).

@@ -1012,26 +1012,35 @@ def get_results(con: duckdb.DuckDBPyConnection, refresh_if_stale: bool = True) -
 
 
 def watch(
-    con: duckdb.DuckDBPyConnection,
+    connect=storage.connect,
     start_local: str = "11:05",
     end_local: str = "18:00",
     every_min: int = 15,
 ) -> str:
     """On an auction day (per the stored calendar), poll the results page until today's result
-    is stored. Exits at once on non-auction days."""
+    is stored. Exits at once on other days. Opens the database only for each poll (DuckDB allows
+    one writer process; the dashboard and other jobs must not be locked out for hours)."""
     today = santiago_today()
-    if not storage.count_calendar_on(con, today):
-        return f"{today}: no auction scheduled. Nothing to watch."
+    con = connect()
+    try:
+        if not storage.count_calendar_on(con, today):
+            return f"{today}: no auction scheduled. Nothing to watch."
+    finally:
+        con.close()
     t0 = datetime.combine(today, datetime.strptime(start_local, "%H:%M").time(), SANTIAGO)
     t1 = datetime.combine(today, datetime.strptime(end_local, "%H:%M").time(), SANTIAGO)
     while datetime.now(SANTIAGO) < t1:
         if datetime.now(SANTIAGO) >= t0:
+            con = connect()
             try:
-                run_results(con)
-            except Exception as e:  # noqa: BLE001
-                log.warning("watch: %s", e)
-            if storage.count_results_on(con, today):
-                return f"{today}: results stored."
+                try:
+                    run_results(con)
+                except Exception as e:  # noqa: BLE001
+                    log.warning("watch: %s", e)
+                if storage.count_results_on(con, today):
+                    return f"{today}: results stored."
+            finally:
+                con.close()
         time.sleep(every_min * 60)
     return f"{today}: results not published by {end_local} Santiago. The evening job will retry."
 
@@ -1135,7 +1144,8 @@ def main(argv: list[str] | None = None) -> int:
         if a.cmd == "master":
             print(f"Bond master: {run_master(con)} bonds")
         if a.cmd == "watch":
-            print(watch(con))
+            con.close()
+            print(watch())
         if a.cmd == "backfill":
             for y, res in backfill(con, a.year).items():
                 print(f"{y}: {res}")

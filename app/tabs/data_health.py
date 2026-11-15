@@ -21,6 +21,7 @@ def _load() -> dict[str, pd.DataFrame]:
             "summary": storage.ingest_summary(conn),
             "errors": storage.recent_errors(conn),
             "series": storage.series_status(conn),
+            "bonds": storage.read_bond_master(conn),
         }
     finally:
         conn.close()
@@ -84,6 +85,25 @@ def render() -> None:
             )
         ]
         st.dataframe(series, hide_index=True, width="stretch")
+
+    st.markdown("#### Treasury bonds needing review (Bond Monitor)")
+    bonds = data["bonds"]
+    if bonds.empty:
+        st.caption(
+            "Bond master not loaded yet (`uv run python -m monitor.jobs.bond_master_weekly`)."
+        )
+    else:
+        missing = bonds[bonds["source"] == "nemo"]
+        odd = bonds[bonds["flagged"].fillna("").str.contains("exclude|differs")]
+        st.caption(
+            f"{len(missing)} bonds seen in Hacienda's calendar or results but missing from its "
+            f"master files (decoded from the nemo, maturity day unknown); {len(odd)} with "
+            "inconsistent coupon data in Hacienda's files."
+        )
+        review = pd.concat([missing, odd])[
+            ["nemo", "instrument_type", "maturity_date", "source", "flagged"]
+        ]
+        st.dataframe(review, hide_index=True, width="stretch", height=220)
 
     st.markdown("#### Recent errors")
     if errors.empty:

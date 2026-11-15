@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 import traceback
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
@@ -264,6 +265,21 @@ def utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+LOCK_RETRIES = 8  # ~25 s in total: another process (job or app) briefly holds the write lock
+
+
+def _connect_with_retry(target: str, read_only: bool) -> duckdb.DuckDBPyConnection:
+    """DuckDB allows one writer process at a time; wait briefly instead of failing at once."""
+    for attempt in range(LOCK_RETRIES):
+        try:
+            return duckdb.connect(target, read_only=read_only)
+        except duckdb.IOException as e:
+            if "lock" not in str(e).lower() or attempt == LOCK_RETRIES - 1:
+                raise
+            time.sleep(0.25 * 2**attempt if attempt < 5 else 5.0)
+    raise RuntimeError("unreachable")
+
+
 def connect(path: Path | str | None = None, read_only: bool = False) -> duckdb.DuckDBPyConnection:
     """Open the database (``:memory:`` allowed) and ensure the schema exists."""
     target = str(path) if path is not None else str(DEFAULT_DB_PATH)
@@ -273,7 +289,7 @@ def connect(path: Path | str | None = None, read_only: bool = False) -> duckdb.D
             init = duckdb.connect(target)
             init.execute(SCHEMA)
             init.close()
-    conn = duckdb.connect(target, read_only=read_only)
+    conn = _connect_with_retry(target, read_only)
     if not read_only:
         conn.execute(SCHEMA)
         for stmt in MIGRATIONS:
