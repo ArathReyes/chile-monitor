@@ -22,27 +22,69 @@ STANCE_ICON = {
     "Dovish-leaning": "🕊️",
     "Mixed": "⚖️",
     "No recorded dissents": "🤝",
+    "No named votes in statements": "·",
 }
 
 
-def _cards(stance: pd.DataFrame) -> None:
-    cols = st.columns(min(len(stance), 3) or 1)
-    for i, r in enumerate(stance.itertuples(index=False)):
+def _avatar(name: str) -> None:
+    initials = "".join(w[0] for w in name.split()[:2]).upper()
+    st.markdown(
+        f'<div style="width:96px;height:96px;border-radius:50%;background:rgba(139,138,133,0.25);'
+        f"display:flex;align-items:center;justify-content:center;font-size:30px;"
+        f'font-weight:600;color:#52514e">{initials}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _stance_line(r) -> None:
+    label = r.stance if isinstance(r.stance, str) else "No named votes in statements"
+    icon = STANCE_ICON.get(label, "·")
+    st.markdown(f"{icon} **{label}**")
+    if isinstance(r.dissents, (int, float)) and r.dissents and r.dissents == r.dissents:
+        st.caption(
+            f"{int(r.dissents)} dissent(s) in {int(r.named_votes)} named votes · "
+            f"{int(r.hawkish)} hawkish / {int(r.dovish)} dovish · net {r.net_gap_bp:+.0f}bp"
+        )
+    elif label == "No recorded dissents":
+        st.caption(f"Voted with the majority in all {int(r.named_votes)} split votes where named.")
+    else:
+        st.caption(
+            "Not named in any split vote (all decisions in their term were unanimous "
+            "or they joined after the last split)."
+        )
+
+
+def _cards(board: pd.DataFrame, profiles: dict, photos: dict) -> None:
+    cols = st.columns(min(len(board), 3) or 1)
+    for i, r in enumerate(board.itertuples(index=False)):
+        prof = profiles.get(r.surname_key)
         with cols[i % len(cols)].container(border=True):
-            st.markdown(f"**{r.member}** · {r.last_role}")
-            st.caption(
-                "Photo, full name, education and term: pending board pages "
-                "(data/manual/bcch_web/board/)."
-            )
-            st.markdown(f"{STANCE_ICON[r.stance]} **{r.stance}**")
-            if r.dissents:
-                st.caption(
-                    f"{r.dissents} dissent(s) in {r.named_votes} named votes · "
-                    f"{r.hawkish} hawkish / {r.dovish} dovish · net {r.net_gap_bp:+.0f}bp"
+            c1, c2 = st.columns([1, 2.4])
+            with c1:
+                if r.surname_key in photos:
+                    st.image(photos[r.surname_key], width=96)
+                else:
+                    _avatar(r.full_name)
+            with c2:
+                st.markdown(f"**{r.full_name}**")
+                role = (
+                    r.role_now
+                    if r.role_now == "Board member"
+                    else f"{r.role_now} (since {r.role_since})"
                 )
+                yrs = r.years_on_board
+                tenure = "joined this year" if yrs == 0 else f"{yrs} yr{'s' if yrs != 1 else ''}"
+                st.caption(f"{role} · on the Board since {r.board_since} ({tenure})")
+            if prof and prof.education:
+                st.markdown("**Education**")
+                for e in prof.education:
+                    st.caption(e)
             else:
-                st.caption(f"Voted with the majority in all {r.named_votes} named split votes.")
-            st.caption(f"Named in statements {r.first_seen:%b %Y} – {r.last_seen:%b %Y}")
+                st.caption("Education: profile page not saved yet.")
+            _stance_line(r)
+            if prof:
+                with st.expander("Bio"):
+                    st.write(prof.bio)
 
 
 def _dissent_chart(mv: pd.DataFrame) -> go.Figure | None:
@@ -125,14 +167,36 @@ def render() -> None:
     rec = vote_record(parsed)
     asof = f"{stm['meeting_date'].min():%b %Y} – {stm['meeting_date'].max():%b %Y}"
 
-    st.markdown("#### Board members (revealed stance from statement dissents)")
-    st.caption(
-        f"Based on {len(rec)} statements ({asof}); {int((~rec['unanimous']).sum())} "
-        "had dissents. Unanimous statements don't name members, so stance only reflects "
-        "meetings with a split vote, and current members who never dissented show no lean. "
-        "Current composition, photos and education need the saved board pages."
-    )
-    _cards(stance)
+    bd = mp_data.board_data()
+    auth = bd["authorities"]
+    st.markdown("#### Current Board")
+    if auth.empty:
+        err = f" ({bd['error']})" if bd["error"] else ""
+        pending(
+            "Board composition needs the 'Histórico Autoridades' PDF in "
+            f"data/manual/bcch_web/board/.{err}"
+        )
+    else:
+        from monitor.models.board import attach_stance, current_board, former_in_statements
+
+        board = attach_stance(current_board(auth, date.today().year), stance, bd["aliases"])
+        _cards(board, bd["profiles"], bd["photos"])
+        st.caption(
+            "Composition and terms: BCCh 'Nómina de autoridades' PDF (years only). Hawk/dove: "
+            f"revealed stance from {len(rec)} press releases ({asof}), of which "
+            f"{int((~rec['unanimous']).sum())} had dissents; unanimous statements don't name "
+            "members, so no dissent doesn't mean neutral. Photos: the site blocks image "
+            "downloads; add them as data/manual/bcch_web/board/photos/<surname>.jpg."
+        )
+        former = former_in_statements(stance, board, auth, bd["aliases"])
+        if not former.empty:
+            with st.expander(f"Former members named in statements ({len(former)})"):
+                st.dataframe(former, hide_index=True, width="stretch")
+                if (former["board_term"] == "not found in authorities list").any():
+                    st.caption(
+                        "⚠️ Names not found in the authorities PDF are shown as written "
+                        "in the statements. Confirm aliases in config/board_overrides.yaml."
+                    )
 
     fig = _dissent_chart(mv)
     if fig:

@@ -1,0 +1,9 @@
+# Manual overrides for Board data. Generated data comes from data/manual/bcch_web/board/
+# (authorities PDF + saved profile pages); this file is for things only a human can confirm.
+
+# Statement surname -> authorities-list surname, ONLY once confirmed to be the same person.
+# Open question (2026-11-14): statements name "Griffith-Jones" (Board member 2022-23,
+# Vice-Governor 2024); the authorities PDF lists "Stepanka Novy Kafka" for the same seat
+# (Board 2022-2025, Vice-Governor 2024-2025). Uncomment if confirmed:
+aliases: {}
+#  Griffith-Jones: Novy

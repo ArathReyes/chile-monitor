@@ -124,3 +124,99 @@ def member_stance(votes: pd.DataFrame) -> pd.DataFrame:
             }
         )
     return pd.DataFrame(rows).sort_values(["dissents", "member"], ascending=[False, True])
+
+
+# ------------------------------------------------------------------ board view
+
+
+def current_board(
+    authorities: pd.DataFrame,
+    year: int,
+) -> pd.DataFrame:
+    """Current members (open-ended Board rows) with their current role."""
+    if authorities.empty:
+        return pd.DataFrame(
+            columns=[
+                "surname_key",
+                "full_name",
+                "role_now",
+                "board_since",
+                "role_since",
+                "years_on_board",
+            ]
+        )
+    open_rows = authorities[authorities["end_year"].isna()]
+    members = open_rows[open_rows["role"] == "Board member"]
+    rows = []
+    for m in members.itertuples(index=False):
+        role_now, role_since = "Board member", m.start_year
+        for role in ("Governor", "Vice-Governor"):
+            hit = open_rows[
+                (open_rows["role"] == role) & (open_rows["surname_key"] == m.surname_key)
+            ]
+            if not hit.empty:
+                role_now, role_since = role, int(hit["start_year"].iloc[0])
+        rows.append(
+            {
+                "surname_key": m.surname_key,
+                "full_name": m.full_name,
+                "role_now": role_now,
+                "board_since": int(m.start_year),
+                "role_since": role_since,
+                "years_on_board": year - int(m.start_year),
+            }
+        )
+    order = {"Governor": 0, "Vice-Governor": 1, "Board member": 2}
+    df = pd.DataFrame(rows)
+    return df.sort_values(
+        ["role_now", "board_since"], key=lambda c: c.map(order) if c.name == "role_now" else c
+    )
+
+
+def attach_stance(
+    board: pd.DataFrame, stance: pd.DataFrame, aliases: dict[str, str]
+) -> pd.DataFrame:
+    """Join statement-based stance onto board rows by surname (statement name or alias)."""
+    st = stance.copy()
+    st["key"] = st["member"].map(lambda n: aliases.get(n, n))
+    cols = ["dissents", "hawkish", "dovish", "net_gap_bp", "named_votes", "stance", "member"]
+    out = board.merge(st[["key", *cols]], left_on="surname_key", right_on="key", how="left")
+    out["stance"] = out["stance"].fillna("No named votes in statements")
+    return out.drop(columns=["key"])
+
+
+def _term(a: pd.DataFrame) -> str:
+    if a.empty:
+        return "not found in authorities list"
+    start, end = a["start_year"].iloc[0], a["end_year"].iloc[0]
+    return f"{int(start)}–{int(end) if pd.notna(end) else 'present'}"
+
+
+def former_in_statements(
+    stance: pd.DataFrame, board: pd.DataFrame, authorities: pd.DataFrame, aliases: dict[str, str]
+) -> pd.DataFrame:
+    """Members named in statements who are not on the current Board."""
+    current = set(board["surname_key"])
+    rows = []
+    for r in stance.itertuples(index=False):
+        key = aliases.get(r.member, r.member)
+        if key in current:
+            continue
+        a = authorities[
+            (authorities["surname_key"] == key) & (authorities["role"] == "Board member")
+        ]
+        term = _term(a)
+        rows.append(
+            {
+                "member": r.member,
+                "full_name": a["full_name"].iloc[0] if not a.empty else "",
+                "board_term": term,
+                "last_role_in_statements": r.last_role,
+                "dissents": r.dissents,
+                "hawkish": r.hawkish,
+                "dovish": r.dovish,
+                "net_gap_bp": r.net_gap_bp,
+                "stance": r.stance,
+            }
+        )
+    return pd.DataFrame(rows)

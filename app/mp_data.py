@@ -432,3 +432,34 @@ def survey_vs_market(since: date = date(2021, 5, 1)) -> pd.DataFrame:
     if not df.empty:
         df["gap_bp"] = df["spc_change_bp"] - df["eof_change_bp"]
     return df
+
+
+# ----------------------------------------------------------------------- board
+
+
+@st.cache_data(ttl=TTL)
+def board_data() -> dict[str, object]:
+    """Authorities list, profiles, photos and overrides from data/manual/bcch_web/board/."""
+    import yaml
+
+    from monitor.config import CONFIG_DIR
+    from monitor.sources import board as board_src
+
+    try:
+        auth = board_src.load_authorities()
+    except ValueError as e:
+        auth, err = pd.DataFrame(), str(e)
+    else:
+        err = None
+    profiles = {board_src.surname_key(p.name): p for p in board_src.load_profiles()}
+    ov_path = CONFIG_DIR / "board_overrides.yaml"
+    overrides = yaml.safe_load(ov_path.read_text(encoding="utf-8")) if ov_path.exists() else {}
+    keys = set(auth["surname_key"]) if not auth.empty else set()
+    photos = {k: str(p) for k in keys if (p := board_src.find_photo(k))}
+    return {
+        "authorities": auth,
+        "profiles": profiles,
+        "photos": photos,
+        "aliases": (overrides or {}).get("aliases") or {},
+        "error": err,
+    }
