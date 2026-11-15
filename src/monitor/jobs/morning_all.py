@@ -20,7 +20,9 @@ from __future__ import annotations
 
 import argparse
 import io
+import json
 import logging
+import subprocess
 import sys
 import time
 import traceback
@@ -28,11 +30,13 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from html import escape
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import duckdb
 
-from monitor import notify, release, storage
+from monitor import notify, pages, release, storage
+from monitor.config import get_secret
 from monitor.http import redact
 from monitor.jobs import bcch_series, curves_daily, macro_daily, snapshot_markets
 from monitor.sources import hacienda as h
@@ -42,6 +46,8 @@ log = logging.getLogger("monitor.morning")
 NY = ZoneInfo("America/New_York")
 UTC = ZoneInfo("UTC")
 JOB = "morning_all"
+REPO = Path(__file__).resolve().parents[3]
+SITE_DIR = REPO / "site"
 
 # series shown in the email's freshness table: (label, series_id)
 FRESHNESS = [
@@ -218,6 +224,36 @@ def report(
     return subject, text, html
 
 
+def _timed(name: str, fn: Callable[[], object]) -> StepResult:
+    return run_steps(None, [(name, lambda _c: fn())])[0]
+
+
+def build_site(out: Path) -> dict:
+    """Run app/export_site.py in a subprocess (src/ never imports Streamlit)."""
+    r = subprocess.run(
+        [sys.executable, str(REPO / "app" / "export_site.py"), "--out", str(out)],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=1800,
+        check=False,
+    )
+    last = (r.stdout.strip().splitlines() or ["{}"])[-1]
+    try:
+        res = json.loads(last)
+    except json.JSONDecodeError:
+        return {"build": f"error: exit {r.returncode}: {r.stderr.strip()[-400:]}"}
+    if res.get("unknown_elements"):
+        log.warning("site: elements not rendered: %s", res["unknown_elements"])
+    summary = f"{res['pages']} pages, {res['plots']} charts, {res['bytes'] / 1e6:.1f} MB"
+    if not res.get("app_exceptions"):
+        return summary
+    # a tab raised: still publish (warn), the other tabs are fine
+    return {"site": summary} | {
+        f"app exception {i}": f"error: {e}" for i, e in enumerate(res["app_exceptions"], 1)
+    }
+
+
 def should_run(now_utc: datetime, at_ny_hour: int | None, last_ok: datetime | None) -> str | None:
     """Reason to skip, or None to run."""
     now_ny = now_utc.astimezone(NY)
@@ -245,6 +281,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--pull", action="store_true", help="download the published DB first")
     p.add_argument("--publish", action="store_true", help="upload the DB as a release asset")
     p.add_argument("--email", action="store_true", help="email the report")
+    p.add_argument("--site", action="store_true", help="build the static site into site/")
+    p.add_argument("--deploy-site", action="store_true", help="push site/ to gh-pages")
     p.add_argument("--at-ny-hour", type=int, default=None, help="skip unless NY hour matches")
     p.add_argument("--force", action="store_true", help="ignore the once-a-day guard")
     a = p.parse_args(argv)
@@ -255,6 +293,7 @@ def main(argv: list[str] | None = None) -> int:
     if skip:
         log.info("skipping: %s", skip)
         return 0
+    pre: list[StepResult] = []
     if a.pull:
         try:
             info = release.pull()
@@ -266,6 +305,7 @@ def main(argv: list[str] | None = None) -> int:
                 notify.send_email("Chile Monitor morning run: FAILED (download)", msg)
             return 1
         log.info("pulled published DB: %s", info or "none published yet, starting empty")
+        pre.append(_timed("Download manual files (board, statements)", release.pull_manual))
     conn = storage.connect()
     try:
         last_ok = None if a.force else storage.last_job_success(conn, JOB)
@@ -274,7 +314,7 @@ def main(argv: list[str] | None = None) -> int:
             log.info("skipping: %s", skip)
             return 0
         today = started.astimezone(NY).date()
-        results = run_steps(conn, steps(today))
+        results = pre + run_steps(conn, steps(today))
         storage.log_ingest(
             conn,
             JOB,
@@ -291,6 +331,8 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         conn.close()
 
+    if a.site:  # after conn.close(): the app opens the database itself
+        results.append(_timed("Build static site", lambda: build_site(SITE_DIR)))
     publish = "skipped (no --publish)"
     if a.publish:
         try:
@@ -300,6 +342,15 @@ def main(argv: list[str] | None = None) -> int:
             log.error("publish failed:\n%s", traceback.format_exc())
             publish = f"FAILED: {type(e).__name__}: {e}"
             results.append(StepResult("Publish database", "fail", publish, 0, [publish]))
+    if a.deploy_site:
+        if results[-1].name == "Build static site" and results[-1].status != "fail":
+            msg = f"Chile Monitor data as of {datetime.now(NY):%Y-%m-%d %H:%M} NY"
+            r = _timed("Deploy site (gh-pages)", lambda: pages.deploy(REPO, SITE_DIR, msg)[:7])
+            results.append(r)
+            if r.status == "ok" and (slug := get_secret("DATA_REPO")):
+                publish += f"; site {pages.site_url(slug)}"
+        else:
+            results.append(StepResult("Deploy site (gh-pages)", "fail", "site not built", 0))
     log.info("publish: %s", publish)
 
     full_log = redact(buf.getvalue())  # belt and braces: no secret ever leaves in an email

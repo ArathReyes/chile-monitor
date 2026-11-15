@@ -45,3 +45,6 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 testpaths = ["tests"]
 markers = ["live: hits a live external API (deselect with -m 'not live')"]
 addopts = "-m 'not live'"
+
+[tool.ruff.lint.per-file-ignores]
+"app/export_site.py" = ["E501"]  # embedded CSS / HTML templates

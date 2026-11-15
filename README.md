@@ -64,38 +64,43 @@ CRON_TZ=America/New_York
 
 The four launchd agents are **frozen** (disabled) since the morning job below replaced them.
 
-## Deployment: morning job + hosted app
+## Deployment: morning job → static site on GitHub Pages
+
+**Site:** https://arathreyes.github.io/chile-monitor/ (public; rebuilt every weekday morning).
 
 ```
-GitHub Actions (Mon–Fri 05:05 NY)                       Streamlit Community Cloud
-  pull monitor.duckdb.gz  ◄── Release "data" ──►  app downloads it on start
-  run every source (BDE, INE, Kalshi/Polymarket,     (checks for a newer one every 15 min)
-  curves, Hacienda; Mondays bond master)             and runs this code live
-  push monitor.duckdb.gz  ───►
-  email the report (AgentMail)
+GitHub Actions, Mon–Fri 05:05 New York (.github/workflows/morning.yml)
+  1. download monitor.duckdb.gz + manual.tar.gz   (Release "data")
+  2. refresh every source: BDE, INE, Kalshi/Polymarket, curves, Hacienda (Mondays: bond master)
+  3. upload monitor.duckdb.gz
+  4. run the real dashboard once and save every tab as HTML   (app/export_site.py)
+  5. force-push the pages as one commit to the gh-pages branch  (monitor.pages)
+  6. email the report (AgentMail)
 ```
 
-- **Workflow:** `.github/workflows/morning.yml` runs `monitor.jobs.morning_all --pull --publish
-  --email --at-ny-hour 5`. GitHub cron is UTC without DST, so it fires at 09:05 and 10:05 UTC
-  and the job keeps only the one that is 05:xx in New York; a second run the same NY day is
-  skipped. Run it now: Actions → morning → Run workflow (forced).
-- **Every step runs even if an earlier one fails.** The email lists OK/WARN/FAIL per step, the
-  errors, the publish result, "data as of" for key series, and the log (tail inline, full log
-  attached). If the published database can't be downloaded, nothing is published and the email
-  says so (never overwrites good data with an empty file).
-- **The database lives in a GitHub Release asset** (`data` tag, `monitor.duckdb.gz`), not in
-  git. `uv run python -m monitor.release status|pull|push` by hand.
-- **Not in the cloud:** BCCh web documents (saved by hand; bcentral.cl is bot-protected). After
-  saving new ones on the Mac: `uv run python -m monitor.release pull`, then
-  `uv run python -m monitor.jobs.mp_daily`, then `uv run python -m monitor.release push`.
-- **Secrets:** repo secrets `BCCH_API_TOKEN`, `AGENTMAIL_API_KEY`; repo variables
-  `AGENTMAIL_INBOX`, `REPORT_TO`. The workflow's own `GITHUB_TOKEN` uploads the asset.
-- **Hosted app** (share.streamlit.io → New app → this repo, `app/main.py`, Python 3.12;
-  dependencies from `requirements.txt`, regenerate with
-  `uv export --no-hashes --no-dev --no-emit-project --format requirements-txt`). Secrets:
-  `AUTO_PULL_DB = "1"`, `DATA_REPO = "owner/name"`, `GITHUB_TOKEN` (fine-grained, read-only
-  Contents on this repo), `BCCH_API_TOKEN` (for the Refresh buttons). Refreshes made in the
-  hosted app last until it restarts or the next morning file arrives.
+- **Static pages from the real code.** `app/export_site.py` runs `app/main.py` with Streamlit's
+  AppTest and converts what it draws (metrics, tables, captions, Plotly figures, sub-tabs,
+  expanders, images) to HTML: one page per tab, sub-tabs switch in the browser, charts keep
+  hover and zoom. Refresh buttons are dropped; filters/pickers show their default value as a chip.
+  Build it locally: `uv run python app/export_site.py --out site` and open `site/index.html`.
+- **Schedule:** GitHub cron is UTC without DST, so it fires at 09:05 and 10:05 UTC and
+  `--at-ny-hour 5` keeps only the one that is 05:xx in New York; a second run the same NY day is
+  skipped. GitHub may start scheduled runs late. Run now: Actions → morning → Run workflow.
+- **Every step runs even if an earlier one fails.** The email lists OK/WARN/FAIL per step with
+  errors, the publish result and site link, "data as of" for key series, and the log (tail
+  inline, full log attached). If the published database can't be downloaded nothing is
+  published (never overwrites good data with an empty file).
+- **Storage:** the database and `data/manual` (saved BCCh pages, PDFs, board photos; without
+  the `*_files` page-asset folders) are Release assets, never in git history. gh-pages is a
+  single commit replaced daily. By hand: `uv run python -m monitor.release
+  status|pull|push|pull-manual|push-manual`.
+- **New BCCh documents** (bcentral.cl is bot-protected, saved by hand on the Mac):
+  `release pull`, `uv run python -m monitor.jobs.mp_daily`, `release push`, `release push-manual`.
+- **Secrets / variables:** secrets `BCCH_API_TOKEN`, `AGENTMAIL_API_KEY`; variables
+  `AGENTMAIL_INBOX`, `REPORT_TO`. The workflow's own `GITHUB_TOKEN` uploads assets and pushes
+  gh-pages. GitHub Pages: Settings → Pages → Deploy from branch `gh-pages` / root.
+- **Optional live app:** `app/bootstrap.py` lets a hosted Streamlit app (e.g. Community Cloud)
+  pull the published database when `AUTO_PULL_DB=1`; dependencies in `requirements.txt`.
 
 ## Checks
 
