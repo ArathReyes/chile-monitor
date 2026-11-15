@@ -434,3 +434,954 @@ series:
   tab: chile_macro
   transform: level
   verified: true
+- series_id: cl_cpi_mm_hist
+  source: bcch
+  source_code: F074.IPC.VAR.Z.Z.C.M
+  name: IPC general, var. mensual oficial (histórico desde 1928)
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'Official INE published m/m (rounded). Used for seasonality and surprises. | BDE title: IPC General histórico,
+    variación mensual'
+- series_id: cl_cpi_mm
+  source: bcch
+  source_code: F074.IPC.VAR.Z.2023.C.M
+  name: IPC general base 2023, var. mensual
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: IPC General, 2023 = 100, Variación Mensual'
+- series_id: cl_cpi_core_mm
+  source: bcch
+  source_code: F074.IPCSAE.VAR.Z.EP23.Z.M
+  name: IPC SAE var. mensual empalmada (oficial INE)
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Sin alimentos y energía | IPC Analíticos, variación empalmada (Cifras oficiales INE), base
+    2023 = 100 | Mensual'
+- series_id: cl_cpi_sv
+  source: bcch
+  source_code: G073.IPCSV.IND.2023.M
+  name: IPC sin volátiles, índice empalmado BCCh base 2023
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Sin volátiles | IPC Analíticos, índice empalmado BCCh, base 2023 = 100 | Mensual'
+- series_id: cl_cpi_sv_mm
+  source: bcch
+  source_code: G073.IPCSV.VAR.2023.M
+  name: IPC sin volátiles, var. mensual empalmada BCCh
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Sin volátiles | IPC Analíticos, variación empalmada BCCh, base 2023 = 100 | Mensual'
+- series_id: cl_cpi_volatile
+  source: bcch
+  source_code: G073.IPCV.IND.2023.M
+  name: IPC volátiles, índice empalmado BCCh
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Volátiles | IPC Analíticos, índice empalmado BCCh, base 2023 = 100 | Mensual'
+- series_id: cl_cpi_food_vol
+  source: bcch
+  source_code: G073.IPCAV.IND.2023.M
+  name: IPC alimentos volátiles, índice empalmado BCCh
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Alimentos volátiles | IPC Analíticos, índice empalmado BCCh, base 2023 = 100 | Mensual'
+- series_id: cl_cpi_energy_vol
+  source: bcch
+  source_code: G073.IPCEN.IND.2023.M
+  name: IPC energía volátiles, índice empalmado BCCh
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Energía volátiles | IPC Analíticos, índice empalmado BCCh, base 2023 = 100 | Mensual'
+- series_id: cl_cpi_goods
+  source: bcch
+  source_code: F074.IPCB.IND.Z.EP23.Z.M
+  name: IPC bienes, índice empalmado (INE) base 2023
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Bienes | IPC Analíticos, índice empalmado (Cifras oficiales INE), base 2023 = 100 | Mensual'
+- series_id: cl_cpi_services
+  source: bcch
+  source_code: F074.IPCS.IND.Z.EP23.Z.M
+  name: IPC servicios, índice empalmado (INE) base 2023
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Servicios | IPC Analíticos, índice empalmado (Cifras oficiales INE), base 2023 = 100 | Mensual'
+- series_id: cl_cpi_tradables
+  source: bcch
+  source_code: F074.IPCT.IND.Z.EP23.Z.M
+  name: IPC transables, índice empalmado (INE) base 2023
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Transables | IPC Analíticos, índice empalmado (Cifras oficiales INE), base 2023 = 100 | Mensual'
+- series_id: cl_cpi_nontradables
+  source: bcch
+  source_code: F074.IPCN.IND.Z.EP23.Z.M
+  name: IPC no transables, índice empalmado (INE) base 2023
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: No transables | IPC Analíticos, índice empalmado (Cifras oficiales INE), base 2023 = 100 |
+    Mensual'
+- series_id: cl_cpi_div01
+  source: bcch
+  source_code: F074.IPC.IND.DIV10000.2023.C.M
+  name: 'IPC división 01: Alimentos y bebidas no alcohólicas (base 2023)'
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: División - Alimentos y bebidas no alcohólicas|IPC, División|Base promedio (2023=100)||Mensual|Índice|INE|'
+- series_id: cl_cpi_div02
+  source: bcch
+  source_code: F074.IPC.IND.DIV20000.2023.C.M
+  name: 'IPC división 02: Bebidas alcohólicas y tabaco (base 2023)'
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: División - Bebidas alcohólicas y tabaco|IPC, División|Base promedio (2023=100)||Mensual|Índice|INE|'
+- series_id: cl_cpi_div03
+  source: bcch
+  source_code: F074.IPC.IND.DIV30000.2023.C.M
+  name: 'IPC división 03: Vestuario y calzado (base 2023)'
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: División - Vestuario y calzado|IPC, División|Base promedio (2023=100)||Mensual|Índice|INE|'
+- series_id: cl_cpi_div04
+  source: bcch
+  source_code: F074.IPC.IND.DIV40000.2023.C.M
+  name: 'IPC división 04: Vivienda y servicios básicos (base 2023)'
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: División - Vivienda y servicios básicos|IPC, División|Base promedio (2023=100)||Mensual|Índice|INE|'
+- series_id: cl_cpi_div05
+  source: bcch
+  source_code: F074.IPC.IND.DIV50000.2023.C.M
+  name: 'IPC división 05: Equipamiento y mantención del hogar (base 2023)'
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: División - Equipamiento y mantención del hogar|IPC, División|Base promedio (2023=100)||Mensual|Índice|INE|'
+- series_id: cl_cpi_div06
+  source: bcch
+  source_code: F074.IPC.IND.DIV60000.2023.C.M
+  name: 'IPC división 06: Salud (base 2023)'
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: División - Salud|IPC, División|Base promedio (2023=100)||Mensual|Índice|INE|'
+- series_id: cl_cpi_div07
+  source: bcch
+  source_code: F074.IPC.IND.DIV70000.2023.C.M
+  name: 'IPC división 07: Transporte (base 2023)'
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: División - Transporte|IPC, División|Base promedio (2023=100)||Mensual|Índice|INE|'
+- series_id: cl_cpi_div08
+  source: bcch
+  source_code: F074.IPC.IND.DIV80000.2023.C.M
+  name: 'IPC división 08: Información y comunicación (base 2023)'
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: División - Información y comunicación|IPC, División|Base promedio (2023=100)||Mensual|Índice|INE|'
+- series_id: cl_cpi_div09
+  source: bcch
+  source_code: F074.IPC.IND.DIV90000.2023.C.M
+  name: 'IPC división 09: Recreación, deportes y cultura (base 2023)'
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: División - Recreación, deportes y cultura|IPC, División|Base promedio (2023=100)||Mensual|Índice|INE|'
+- series_id: cl_cpi_div10
+  source: bcch
+  source_code: F074.IPC.IND.DIV100000.2023.C.M
+  name: 'IPC división 10: Educación (base 2023)'
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: División - Educación|IPC, División|Base promedio (2023=100)||Mensual|Índice|INE|'
+- series_id: cl_cpi_div11
+  source: bcch
+  source_code: F074.IPC.IND.DIV110000.2023.C.M
+  name: 'IPC división 11: Restaurantes y alojamiento (base 2023)'
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: División - Restaurantes y alojamiento|IPC, División|Base promedio (2023=100)||Mensual|Índice|INE|'
+- series_id: cl_cpi_div12
+  source: bcch
+  source_code: F074.IPC.IND.DIV120000.2023.C.M
+  name: 'IPC división 12: Seguros y servicios financieros (base 2023)'
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: División - Seguros y servicios financieros|IPC, División|Base promedio (2023=100)||Mensual|Índice|INE|'
+- series_id: cl_cpi_div13
+  source: bcch
+  source_code: F074.IPC.IND.DIV130000.2023.C.M
+  name: 'IPC división 13: Bienes y servicios diversos (base 2023)'
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: División - Bienes y servicios diversos|IPC, División|Base promedio (2023=100)||Mensual|Índice|INE|'
+- series_id: cl_uf
+  source: bcch
+  source_code: F073.UFF.PRE.Z.D
+  name: Unidad de Fomento (UF)
+  freq: D
+  unit: CLP
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Unidad de fomento (UF)'
+- series_id: cl_usdclp
+  source: bcch
+  source_code: F073.TCO.PRE.Z.D
+  name: Dólar observado (CLP/USD)
+  freq: D
+  unit: CLP
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Tipo de cambio nominal (dólar observado $CLP/USD)\ tipo de cambio \ precio \ diario \ BCCh'
+- series_id: cu_lme
+  source: bcch
+  source_code: F019.PPB.PRE.100.D
+  name: Precio del cobre refinado BML
+  freq: D
+  unit: USD/lb
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'LME copper, official BDE (used instead of yfinance) | BDE title: Precio del cobre refinado BML (dólares/libra)
+    | Diario '
+- series_id: cl_imacec_sa
+  source: bcch
+  source_code: F032.IMC.IND.Z.Z.EP18.Z.Z.1.M
+  name: IMACEC desestacionalizado (2018=100)
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Imacec empalmado, desestacionalizado (índice 2018=100)'
+- series_id: cl_imacec_mining
+  source: bcch
+  source_code: F032.IMC.IND.Z.Z.EP18.03.Z.0.M
+  name: IMACEC minero (2018=100)
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Imacec minero, serie empalmada (Indice 2018=100)'
+- series_id: cl_imacec_mining_sa
+  source: bcch
+  source_code: F032.IMC.IND.Z.Z.EP18.03.Z.1.M
+  name: IMACEC minero SA (2018=100)
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Imacec minero desestacionalizado, serie empalmada (Índice 2018=100)'
+- series_id: cl_imacec_nonmining
+  source: bcch
+  source_code: F032.IMC.IND.Z.Z.EP18.N03.Z.0.M
+  name: IMACEC no minero (2018=100)
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Imacec no minero, serie empalmada (Indice 2018=100)'
+- series_id: cl_imacec_nonmining_sa
+  source: bcch
+  source_code: F032.IMC.IND.Z.Z.EP18.N03.Z.1.M
+  name: IMACEC no minero SA (2018=100)
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Imacec no minero desestacionalizado, serie empalmada (Índice 2018=100)'
+- series_id: cl_imacec_pb
+  source: bcch
+  source_code: F032.IMC.IND.Z.Z.EP18.PB.Z.0.M
+  name: IMACEC producción de bienes (2018=100)
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Imacec producción de bienes, serie original (índice 2018=100)'
+- series_id: cl_imacec_pb_sa
+  source: bcch
+  source_code: F032.IMC.IND.Z.Z.EP18.PB.Z.1.M
+  name: IMACEC producción de bienes SA (2018=100)
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Imacec producción de bienes desestacionalizado, serie empalmada (Índice 2018=100)'
+- series_id: cl_imacec_com
+  source: bcch
+  source_code: F032.IMC.IND.Z.Z.EP18.COM.Z.0.M
+  name: IMACEC comercio (2018=100)
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Imacec comercio, serie original (índice 2018=100)'
+- series_id: cl_imacec_com_sa
+  source: bcch
+  source_code: F032.IMC.IND.Z.Z.EP18.COM.Z.1.M
+  name: IMACEC comercio SA (2018=100)
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Imacec comercio desestacionalizado, serie empalmada (Índice 2018=100)'
+- series_id: cl_imacec_serv
+  source: bcch
+  source_code: F032.IMC.IND.Z.Z.EP18.SERV.Z.0.M
+  name: IMACEC servicios (2018=100)
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Imacec servicios, serie original (índice 2018=100)'
+- series_id: cl_imacec_serv_sa
+  source: bcch
+  source_code: F032.IMC.IND.Z.Z.EP18.SERV.Z.1.M
+  name: IMACEC servicios SA (2018=100)
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Imacec servicios desestacionalizado, serie empalmada (Índice 2018=100)'
+- series_id: cl_gdp
+  source: bcch
+  source_code: F032.PIB.FLU.R.CLP.EP18.Z.Z.0.T
+  name: PIB volumen encadenado (ref. 2018)
+  freq: Q
+  unit: CLP bn chained
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: PIB, volumen a precios del año anterior encadenado, referencia 2018 (miles de millones de pesos
+    encadenados)'
+- series_id: cl_gdp_sa
+  source: bcch
+  source_code: F032.PIB.FLU.R.CLP.EP18.Z.Z.1.T
+  name: PIB volumen encadenado SA (ref. 2018)
+  freq: Q
+  unit: CLP bn chained
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: PIB volumen a precios del año anterior encadenado,  desestacionalizado,  series empalmadas,
+    referencia 2018 (miles de mi'
+- series_id: cl_unemp_sa
+  source: bcch
+  source_code: F049.DES.TAS.INE.10.M
+  name: Tasa de desocupación SA (trimestre móvil)
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Tasa de desocupación, total | Ajustada estacionalmente | INE | Mensual | Porcentaje'
+- series_id: cl_unemp
+  source: bcch
+  source_code: F049.DES.TAS.INE9.10.M
+  name: Tasa de desocupación (trimestre móvil, NSA)
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Tasa de desocupación, total | No Ajustada | INE | Mensual | Porcentaje'
+- series_id: cl_employment_sa
+  source: bcch
+  source_code: F049.OCU.PMT.INE.10.M
+  name: Ocupados SA
+  freq: M
+  unit: thousand persons
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Personas ocupadas, total | Ajustada estacionalmente | INE | Mensual | Miles de Personas'
+- series_id: cl_employment
+  source: bcch
+  source_code: F049.OCU.PMT.INE9.01.M
+  name: Ocupados (NSA)
+  freq: M
+  unit: thousand persons
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Personas ocupadas, total | No Ajustada | INE | Mensual | Miles de Personas'
+- series_id: cl_laborforce_sa
+  source: bcch
+  source_code: F049.FTR.PMT.INE.10.M
+  name: Fuerza de trabajo SA
+  freq: M
+  unit: thousand persons
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Fuerza de trabajo, total | Ajustada estacionalmente | INE | Mensual | Miles de Personas'
+- series_id: cl_wages_nominal
+  source: bcch
+  source_code: G049.RMM.IND.INE23.NE.M
+  name: Índice nominal de remuneraciones (IR), empalmado base 2023
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Índice nominal de remuneraciones, serie empalmada, base 2023=100, INE'
+- series_id: cl_wages_real
+  source: bcch
+  source_code: G049.RMM.IND.INE23.R.M
+  name: Índice real de remuneraciones, empalmado base 2023
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Índice real de remuneraciones,  serie empalmada, base 2023=100, INE'
+- series_id: cl_icmo
+  source: bcch
+  source_code: F049.CMH.IND.HIST.Z.M
+  name: Índice de costo de la mano de obra por hora (ICMO), nominal
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'Real ICMO is computed in-app (deflated by CPI) and labeled ''computed''. | BDE title: Índice de costo
+    de la mano de obra por hora, nominal, serie histórica'
+- series_id: cl_exports
+  source: bcch
+  source_code: F068.B1.FLU.Z.0.C.N.Z.Z.Z.Z.6.0.M
+  name: Exportaciones de bienes (FOB)
+  freq: M
+  unit: USD mn
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Balanza de pagos, bienes , exportaciones (mensual)'
+- series_id: cl_exports_copper
+  source: bcch
+  source_code: F068.B1.FLU.A1.0.C.N.Z.Z.Z.Z.6.0.M
+  name: Exportaciones de cobre (FOB)
+  freq: M
+  unit: USD mn
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Exportaciones FOB, Mineras, Cobre (millones de dólares)'
+- series_id: cl_imports
+  source: bcch
+  source_code: F068.B1.FLU.Z.0.D.N.0.T.Z.Z.6.0.M
+  name: Importaciones de bienes (FOB)
+  freq: M
+  unit: USD mn
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title:  Importaciones de bienes FOB (millones de dólares) '
+- series_id: cl_trade_balance
+  source: bcch
+  source_code: F068.B1.VAR.T0.0.S.N.Z.Z.Z.Z.6.0.M
+  name: Saldo balanza comercial
+  freq: M
+  unit: USD mn
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Saldo Balanza Comercial (millones de dólares)'
+- series_id: cl_ca_gdp
+  source: bcch
+  source_code: F068.A.PFA18.Z.0.S.N.Z.Z.Z.Z.6.0.T
+  name: Cuenta corriente, % del PIB (12 meses)
+  freq: Q
+  unit: pct GDP
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Cuenta corriente de la balanza de pagos (porcentaje del PIB, últimos 12 meses), Ratios estadísticas
+    externas, nominal, p'
+- series_id: cl_ca
+  source: bcch
+  source_code: F068.A.FLU.Z.0.S.N.Z.Z.Z.Z.6.0.T
+  name: Cuenta corriente (trimestral)
+  freq: Q
+  unit: USD mn
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Cuenta corriente (millones de dólares) '
+- series_id: eee_cpi_mm_this_month
+  source: bcch
+  source_code: F089.IPC.VAR.11.M
+  name: EEE IPC var. mensual, en el mes
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'obs_date = survey date (EEE: 1st of survey month) | BDE title: Expectativas de inflación en el mes (variación
+    mensual, mediana)'
+- series_id: eee_cpi_mm_next_month
+  source: bcch
+  source_code: F089.IPC.VAR.24.M
+  name: EEE IPC var. mensual, mes siguiente
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'obs_date = survey date (EEE: 1st of survey month) | BDE title: Expectativas de inflación en el mes siguiente
+    (variación mensual, mediana)'
+- series_id: eee_cpi_yoy_11m
+  source: bcch
+  source_code: F089.IPC.V12.14.M
+  name: EEE inflación en 11 meses (12m)
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'obs_date = survey date (EEE: 1st of survey month) | BDE title: Expectativas de inflación en 11 meses (variación
+    12 meses, mediana)'
+- series_id: eee_cpi_yoy_23m
+  source: bcch
+  source_code: F089.IPC.V12.15.M
+  name: EEE inflación en 23 meses (12m)
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'obs_date = survey date (EEE: 1st of survey month) | BDE title: Expectativas de inflación en 23 meses (variación
+    12 meses, mediana)'
+- series_id: eee_cpi_yoy_35m
+  source: bcch
+  source_code: F089.IPC.V12.35.M
+  name: EEE inflación en 35 meses (12m)
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'obs_date = survey date (EEE: 1st of survey month) | BDE title: Evolución expectativas económicas / Inflación
+    / En 35 meses / variación 12 meses / Mediana'
+- series_id: eee_cpi_dec2026
+  source: bcch
+  source_code: F089.IPC.V12.2026.M
+  name: EEE inflación diciembre 2026
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'obs_date = survey date (EEE: 1st of survey month) | BDE title: Inflación, diciembre 2026'
+- series_id: eee_cpi_dec2027
+  source: bcch
+  source_code: F089.IPC.V12.2027.M
+  name: EEE inflación diciembre 2027
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'obs_date = survey date (EEE: 1st of survey month) | BDE title: Inflación, diciembre 2027'
+- series_id: eee_cpi_dec2028
+  source: bcch
+  source_code: F089.IPC.V12.2028.M
+  name: EEE inflación diciembre 2028
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'obs_date = survey date (EEE: 1st of survey month) | BDE title: Inflación, diciembre 2028 | Encuesta de
+    Expectativas Económica (EEE)'
+- series_id: eee_cpisv_yoy_11m
+  source: bcch
+  source_code: F089.IPCSV.V12.14.M
+  name: EEE inflación sin volátiles en 11 meses
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'obs_date = survey date (EEE: 1st of survey month) | BDE title: En 11 meses (variación 12 meses); Expectativas
+    de inflación sin volátiles; índice; mensual; porcentaje; BCCh'
+- series_id: eee_cpisv_yoy_23m
+  source: bcch
+  source_code: F089.IPCSV.V12.15.M
+  name: EEE inflación sin volátiles en 23 meses
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'obs_date = survey date (EEE: 1st of survey month) | BDE title: En 23 meses (variación 12 meses); Expectativas
+    de inflación sin volátiles; índice; mensual; porcentaje; BCCh'
+- series_id: eee_imacec_prev_month
+  source: bcch
+  source_code: F089.IMC.V12.10.M
+  name: EEE IMACEC (12m), un mes atrás
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'obs_date = survey date (EEE: 1st of survey month) | BDE title: Expectativas IMACEC, un mes atrás, mediana'
+- series_id: eee_imacec_nm_prev_month
+  source: bcch
+  source_code: F089.IMCNM.V12.10.M
+  name: EEE IMACEC no minero (12m), un mes atrás
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'obs_date = survey date (EEE: 1st of survey month) | BDE title: Expectativas IMACEC No Minero, un mes atrás'
+- series_id: eee_gdp_2026
+  source: bcch
+  source_code: F089.PIB.V12.2026.M
+  name: EEE PIB año 2026
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'obs_date = survey date (EEE: 1st of survey month) | BDE title: PIB, año 2026'
+- series_id: eee_gdp_2027
+  source: bcch
+  source_code: F089.PIB.V12.2027.M
+  name: EEE PIB año 2027
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'obs_date = survey date (EEE: 1st of survey month) | BDE title: PIB, año 2027 | PIB e IMACEC | BCCh | Mensual
+    | Porcentaje | Índice'
+- series_id: eee_gdp_2028
+  source: bcch
+  source_code: F089.PIB.V12.2028.M
+  name: EEE PIB año 2028
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'obs_date = survey date (EEE: 1st of survey month) | BDE title: Expectativas PIB, año 2028'
+- series_id: eof_cpi_mm_this_month
+  source: bcch
+  source_code: F089.EOF.VII.MA.D
+  name: EOF IPC var. mensual, mes actual
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'obs_date = survey date (EEE: 1st of survey month) | BDE title: Evolución encuesta de operadores financieros
+    (EOF), Inflación (variación IPC en %). Mes actual'
+- series_id: eof_cpi_mm_next_month
+  source: bcch
+  source_code: F089.EOF.VII.MS.D
+  name: EOF IPC var. mensual, 1 mes adelante
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'obs_date = survey date (EEE: 1st of survey month) | BDE title: Evolución encuesta de operadores financieros
+    (EOF), Inflación (variación IPC en %). 1 mes adelante'
+- series_id: eof_cpi_mm_2m
+  source: bcch
+  source_code: F089.EOF.VII.2MS.D
+  name: EOF IPC var. mensual, 2 meses adelante
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'obs_date = survey date (EEE: 1st of survey month) | BDE title: Evolución encuesta de operadores financieros
+    (EOF), Inflación (variación IPC en %). 2 meses adelante'
+- series_id: eof_cpi_12m
+  source: bcch
+  source_code: F089.EOF.VII.12MS.D
+  name: EOF inflación 12 meses siguientes
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'obs_date = survey date (EEE: 1st of survey month) | BDE title: Evolución encuesta de operadores financieros
+    (EOF), Inflación (variación IPC en %). 12 meses siguientes (1 al 12)'
+- series_id: cl_bei_swap_1y
+  source: bcch
+  source_code: F022.SWSP.TAS.AN01.Z.Z.D
+  name: Compensación inflacionaria Cámara swaps, spot 1y
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Compensación inflacionaria Swaps promedio cámara , Spot 1 año'
+- series_id: cl_bei_swap_2y
+  source: bcch
+  source_code: F022.SWSP.TAS.AN02.Z.Z.D
+  name: Compensación inflacionaria Cámara swaps, spot 2y
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Compensación inflacionaria Swaps promedio cámara , Spot 2 años'
+- series_id: cl_bei_swap_5y
+  source: bcch
+  source_code: F022.SWSP.TAS.AN05.Z.Z.D
+  name: Compensación inflacionaria Cámara swaps, spot 5y
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Compensación inflacionaria Swaps promedio cámara , Spot 5 años'
+- series_id: cl_bei_swap_10y
+  source: bcch
+  source_code: F022.SWSP.TAS.AN10.Z.Z.D
+  name: Compensación inflacionaria Cámara swaps, spot 10y
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Compensación inflacionaria Swaps promedio cámara , Spot 10 años'
+- series_id: cl_bei_swap_1y1y
+  source: bcch
+  source_code: F022.SWFW.TAS.E1X1.Z.Z.D
+  name: Compensación inflacionaria Cámara swaps, fwd 1y in 1y
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Compensación inflacionaria Swaps promedio cámara , Forward BEI 1 en 1'
+- series_id: cl_bei_swap_3y2y
+  source: bcch
+  source_code: F022.SWFW.TAS.E3X2.Z.Z.D
+  name: Compensación inflacionaria Cámara swaps, fwd 3y in 2y
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Compensación inflacionaria Swaps promedio cámara , Forward BEI 3 en 2'
+- series_id: cl_bei_swap_5y5y
+  source: bcch
+  source_code: F022.SWFW.TAS.E5X5.Z.Z.D
+  name: Compensación inflacionaria Cámara swaps, fwd 5y in 5y
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Compensación inflacionaria Swaps promedio cámara , Forward BEI 5 en 5'
+- series_id: cl_bei_bond_2y
+  source: bcch
+  source_code: F022.BOSP.TAS.AN02.Z.Z.D
+  name: Compensación inflacionaria BCCh bonds, spot 2y
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Compensación inflacionaria bonos BCCh , Spot 2 años'
+- series_id: cl_bei_bond_5y
+  source: bcch
+  source_code: F022.BOSP.TAS.AN05.Z.Z.D
+  name: Compensación inflacionaria BCCh bonds, spot 5y
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Compensación inflacionaria bonos BCCh , Spot 5 años'
+- series_id: cl_bei_bond_10y
+  source: bcch
+  source_code: F022.BOSP.TAS.AN10.Z.Z.D
+  name: Compensación inflacionaria BCCh bonds, spot 10y
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Compensación inflacionaria bonos BCCh , Spot 10 años'
+- series_id: cl_bei_bond_3y2y
+  source: bcch
+  source_code: F022.BOFW.TAS.E3X2.Z.Z.D
+  name: Compensación inflacionaria BCCh bonds, fwd 3y in 2y
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Compensación inflacionaria bonos BCCh , Forward BEI 3 en 2'
+- series_id: cl_bei_bond_5y5y
+  source: bcch
+  source_code: F022.BOFW.TAS.E5X5.Z.Z.D
+  name: Compensación inflacionaria BCCh bonds, fwd 5y in 5y
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Compensación inflacionaria bonos BCCh , Forward BEI 5 en 5'
+- series_id: cl_bcp_2y
+  source: bcch
+  source_code: F022.BCLP.TIS.AN02.NO.Z.D
+  name: BCP 2y, mercado secundario
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Tasa de interés mercado secundario de los bonos licitados por el BCCh (BCP) a 2 años'
+- series_id: cl_bcp_5y
+  source: bcch
+  source_code: F022.BCLP.TIS.AN05.NO.Z.D
+  name: BCP 5y, mercado secundario
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Tasa de interés mercado secundario de los bonos licitados por el BCCh (BCP) a 5 años'
+- series_id: cl_bcp_10y
+  source: bcch
+  source_code: F022.BCLP.TIS.AN10.NO.Z.D
+  name: BCP 10y, mercado secundario
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Tasa de interés mercado secundario de los bonos licitados por el BCCh (BCP) a 10 años'
+- series_id: cl_bcu_2y
+  source: bcch
+  source_code: F022.BUF.TIS.AN02.UF.Z.D
+  name: Bonos UF (BCU/BTU) 2y, mercado secundario
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Tasa de interés mercado secundario, bonos en UF a 2 años (BCU, BTU)'
+- series_id: cl_bcu_5y
+  source: bcch
+  source_code: F022.BUF.TIS.AN05.UF.Z.D
+  name: Bonos UF (BCU/BTU) 5y, mercado secundario
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Tasa de interés mercado secundario, bonos en UF a 5 años (BCU, BTU)'
+- series_id: cl_bcu_10y
+  source: bcch
+  source_code: F022.BUF.TIS.AN10.UF.Z.D
+  name: Bonos UF (BCU/BTU) 10y, mercado secundario
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Tasa de interés mercado secundario, bonos en UF a 10 años (BCU, BTU)'
+- series_id: cl_bcu_20y
+  source: bcch
+  source_code: F022.BUF.TIS.AN20.UF.Z.D
+  name: Bonos UF (BCU/BTU) 20y, mercado secundario
+  freq: D
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'BDE title: Tasa de interés mercado secundario, bonos en UF a 20 años (BCU, BTU)'

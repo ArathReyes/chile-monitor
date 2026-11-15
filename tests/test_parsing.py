@@ -107,3 +107,14 @@ def test_redact():
     out = redact(s)
     assert "abc" not in out and "zzz" not in out
     assert "function=GetSeries" in out
+
+
+def test_bcch_keeps_pre_1950_history_but_drops_placeholder():
+    from monitor.sources.bcch import parse_get_series
+
+    payload = {"Codigo": 0, "Series": {"Obs": [
+        {"indexDateString": "31-12-1899", "value": "0", "statusCode": "OK"},
+        {"indexDateString": "01-03-1928", "value": "1.2", "statusCode": "OK"},
+    ]}}  # fmt: skip
+    df = parse_get_series(payload)
+    assert df["obs_date"].tolist() == [date(1928, 3, 1)]

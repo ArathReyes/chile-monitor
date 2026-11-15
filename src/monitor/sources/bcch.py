@@ -20,7 +20,9 @@ from monitor.sources.base import HealthResult, Source
 
 Frequency = Literal["DAILY", "MONTHLY", "QUARTERLY", "ANNUAL"]
 HEALTH_SERIES = "F022.TPM.TIN.D001.NO.Z.D"  # TPM; code from the official docs example
-MIN_OBS_DATE = date(1950, 1, 1)  # older dates are BDE placeholders (seen: 31-12-1899, value 0)
+MIN_OBS_DATE = date(
+    1900, 1, 1
+)  # BDE placeholder date is 31-12-1899 (value 0); real history starts 1928+
 
 log = logging.getLogger(__name__)
 

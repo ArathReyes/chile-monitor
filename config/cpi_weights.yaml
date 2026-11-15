@@ -1,0 +1,49 @@
+# CPI division weights (see method / source_note)
+base: 2023=100
+method: 'estimated: headline_t = sum_i w_i * division_i,t, least squares with w >=
+  0, sum 1'
+sample: 2023-01 to 2026-10 (46 months)
+max_abs_residual_index_pts: 0.0063
+estimated_on: '2026-11-15'
+source_note: BDE series F074.IPC.IND.Z.2023.C.M and F074.IPC.IND.DIV*.2023.C.M (INE).
+  Replace with INE's official basket weights if available.
+weights:
+  cl_cpi_div01:
+    name: Alimentos y bebidas no alcohólicas
+    weight: 0.22157
+  cl_cpi_div02:
+    name: Bebidas alcohólicas y tabaco
+    weight: 0.037
+  cl_cpi_div03:
+    name: Vestuario y calzado
+    weight: 0.02904
+  cl_cpi_div04:
+    name: Vivienda y servicios básicos
+    weight: 0.16745
+  cl_cpi_div05:
+    name: Equipamiento y mantención del hogar
+    weight: 0.06168
+  cl_cpi_div06:
+    name: Salud
+    weight: 0.0825
+  cl_cpi_div07:
+    name: Transporte
+    weight: 0.13492
+  cl_cpi_div08:
+    name: Información y comunicación
+    weight: 0.06526
+  cl_cpi_div09:
+    name: Recreación, deportes y cultura
+    weight: 0.04842
+  cl_cpi_div10:
+    name: Educación
+    weight: 0.04195
+  cl_cpi_div11:
+    name: Restaurantes y alojamiento
+    weight: 0.06235
+  cl_cpi_div12:
+    name: Seguros y servicios financieros
+    weight: 0.01147
+  cl_cpi_div13:
+    name: Bienes y servicios diversos
+    weight: 0.03637

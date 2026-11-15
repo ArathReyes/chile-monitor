@@ -103,6 +103,31 @@ CREATE TABLE IF NOT EXISTS survey_distribution (
     doc_sha256   VARCHAR,
     PRIMARY KEY (survey, survey_month, section, horizon)
 );
+CREATE TABLE IF NOT EXISTS releases (
+    indicator        VARCHAR NOT NULL,   -- cpi, unemployment, wages, ... or 'other'
+    title            VARCHAR NOT NULL,
+    reference_period VARCHAR,            -- YYYY-MM (end of reference period)
+    release_local    TIMESTAMP NOT NULL, -- America/Santiago wall time
+    source           VARCHAR NOT NULL,
+    source_url       VARCHAR,
+    fetched_at       TIMESTAMP NOT NULL,
+    PRIMARY KEY (source, title, release_local)
+);
+CREATE TABLE IF NOT EXISTS release_surprises (
+    indicator        VARCHAR NOT NULL,
+    reference_period VARCHAR NOT NULL,   -- YYYY-MM
+    release_date     DATE,
+    consensus        DOUBLE,
+    consensus_source VARCHAR,
+    consensus_date   DATE,
+    actual           DOUBLE,
+    actual_is_first_print BOOLEAN,
+    surprise         DOUBLE,
+    zscore           DOUBLE,
+    revised          DOUBLE,
+    computed_at      TIMESTAMP NOT NULL,
+    PRIMARY KEY (indicator, reference_period)
+);
 CREATE TABLE IF NOT EXISTS ingest_log (
     job         VARCHAR NOT NULL,
     source      VARCHAR NOT NULL,
@@ -278,7 +303,7 @@ def last_obs_date(conn: duckdb.DuckDBPyConnection, series_id: str) -> date | Non
 
 
 def delete_invalid_observations(
-    conn: duckdb.DuckDBPyConnection, before: date = date(1950, 1, 1)
+    conn: duckdb.DuckDBPyConnection, before: date = date(1900, 1, 1)
 ) -> int:
     """Delete placeholder rows dated before `before` from observations (history is kept).
 
@@ -358,6 +383,50 @@ def read_survey_distribution(conn: duckdb.DuckDBPyConnection, survey: str = "EEE
         "SELECT * FROM survey_distribution WHERE survey = ? ORDER BY survey_month, section_no",
         [survey],
     ).df()
+
+
+def upsert_releases(conn: duckdb.DuckDBPyConnection, df: pd.DataFrame) -> int:
+    if df.empty:
+        return 0
+    d = df.copy()
+    d["fetched_at"] = utcnow()
+    conn.register("_rel", d)
+    try:
+        conn.execute(
+            "INSERT INTO releases SELECT indicator, title, reference_period, release_local, "
+            "source, source_url, fetched_at FROM _rel ON CONFLICT DO UPDATE SET "
+            "indicator = excluded.indicator, reference_period = excluded.reference_period, "
+            "fetched_at = excluded.fetched_at"
+        )
+    finally:
+        conn.unregister("_rel")
+    return len(d)
+
+
+def read_releases(conn: duckdb.DuckDBPyConnection) -> pd.DataFrame:
+    return conn.execute("SELECT * FROM releases ORDER BY release_local").df()
+
+
+def replace_release_surprises(conn: duckdb.DuckDBPyConnection, df: pd.DataFrame) -> int:
+    """Rewrite the release_surprises table (it's fully derived from observations)."""
+    conn.execute("DELETE FROM release_surprises")
+    if df.empty:
+        return 0
+    d = df.copy()
+    d["computed_at"] = utcnow()
+    cols = ["indicator", "reference_period", "release_date", "consensus", "consensus_source",
+            "consensus_date", "actual", "actual_is_first_print", "surprise", "zscore", "revised",
+            "computed_at"]  # fmt: skip
+    conn.register("_rs", d[cols])
+    try:
+        conn.execute("INSERT INTO release_surprises SELECT * FROM _rs")
+    finally:
+        conn.unregister("_rs")
+    return len(d)
+
+
+def read_release_surprises(conn: duckdb.DuckDBPyConnection) -> pd.DataFrame:
+    return conn.execute("SELECT * FROM release_surprises ORDER BY reference_period").df()
 
 
 # ------------------------------------------------------------------ snapshots
