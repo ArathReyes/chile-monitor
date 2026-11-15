@@ -7,7 +7,7 @@ import cr_data
 import numpy as np
 import pandas as pd
 import streamlit as st
-from cr_ui import CAPTION, WINDOWS, curve_caption, header, no_data
+from cr_ui import CAPTION, WINDOWS, curve_caption, header, no_data, text_table
 
 from monitor.models import curves as C
 
@@ -191,7 +191,7 @@ def render() -> None:
         st.caption("No data.")
     else:
         st.dataframe(
-            pct.style.format("{:.0f}", na_rep="").map(_style_pct),
+            text_table(pct, "{:.0f}").style.apply(lambda _: pct.map(_style_pct), axis=None),
             width="stretch",
             key="cr_pct_table",
             on_select="rerun",
@@ -200,6 +200,4 @@ def render() -> None:
         st.caption("Highlighted: ≤ 10th percentile (blue), ≥ 90th (red).")
     if not grid and not cr_data.panel(curve).empty:
         st.markdown(f"**Changes, {label}** (bp; date = actual observation used)")
-        st.dataframe(
-            delta_table(curve, horizons).style.format("{:+.1f}", na_rep=""), width="stretch"
-        )
+        st.dataframe(text_table(delta_table(curve, horizons), "{:+.1f}"), width="stretch")

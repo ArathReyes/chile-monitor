@@ -7,7 +7,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from charts import CAT, base_layout, line
-from cr_ui import curve_caption, header, pending
+from cr_ui import curve_caption, header, pending, text_table
 
 from monitor.models import curves as C
 
@@ -34,7 +34,11 @@ def level_table() -> pd.DataFrame:
                     "spread vs UST": "pending",
                 }
             )
-    return pd.DataFrame(rows)
+    out = pd.DataFrame(rows)
+    for c in ("level (%)", "z 1Y", "z 3Y"):
+        if c in out.columns:
+            out[c] = pd.to_numeric(out[c], errors="coerce")  # None -> NaN (blank)
+    return out
 
 
 def render() -> None:
@@ -51,7 +55,7 @@ def render() -> None:
     )
     t = level_table()
     st.dataframe(
-        t.style.format({"level (%)": "{:.2f}", "z 1Y": "{:+.2f}", "z 3Y": "{:+.2f}"}, na_rep=""),
+        text_table(t, {"level (%)": "{:.2f}", "z 1Y": "{:+.2f}", "z 3Y": "{:+.2f}"}),
         width="stretch",
         hide_index=True,
     )

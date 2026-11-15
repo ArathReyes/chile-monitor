@@ -1,14 +1,12 @@
-"""Chile Rates Monitor: Streamlit entry point. Run: uv run streamlit run app/main.py"""
+"""Chile Monitor: Streamlit entry point. Run: uv run streamlit run app/main.py"""
 
 from __future__ import annotations
 
-from datetime import datetime
-from zoneinfo import ZoneInfo
-
 import streamlit as st
 
-st.set_page_config(page_title="Chile Rates Monitor", page_icon="🇨🇱", layout="wide")
+st.set_page_config(page_title="Chile Monitor", page_icon="🇨🇱", layout="wide")
 
+import style  # noqa: E402
 from tabs import (  # noqa: E402  (set_page_config must run first)
     bond_monitor,
     calendar_tab,
@@ -37,10 +35,8 @@ TABS = [
 
 
 def main() -> None:
-    now_ny = datetime.now(ZoneInfo("America/New_York"))
-    now_scl = now_ny.astimezone(ZoneInfo("America/Santiago"))
-    st.title("Chile Rates Monitor")
-    st.caption(f"Public data only · {now_ny:%a %d %b %Y %H:%M} NY · {now_scl:%H:%M} Santiago")
+    style.apply()
+    style.header()
     for tab, (_, module) in zip(st.tabs([t[0] for t in TABS]), TABS, strict=True):
         with tab:
             module.render()

@@ -27,7 +27,7 @@ def base_layout(fig: go.Figure, title: str | None = None, y_title: str = "%", he
     fig.update_layout(
         title=dict(text=title, x=0, font=dict(size=15)) if title else None,
         height=height,
-        margin=dict(l=8, r=8, t=40 if title else 10, b=8),
+        margin=dict(l=8, r=8, t=72 if title else 10, b=8),
         hovermode="x unified",
         legend=dict(orientation="h", yanchor="bottom", y=1.0, xanchor="left", x=0),
         yaxis=dict(title=y_title, gridcolor="rgba(139,138,133,0.18)", zeroline=False),

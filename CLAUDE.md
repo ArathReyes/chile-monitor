@@ -1,4 +1,4 @@
-# Chile Rates Monitor — CLAUDE.md
+# Chile Monitor — CLAUDE.md
 
 ## What this is
 A personal web dashboard for an EM macro rates trader in NYC focused on Chile. It has two goals:
@@ -31,6 +31,7 @@ Sources (APIs, scrapers) → src/monitor/sources/*  (one module per source, retu
 - `config/meetings.yaml`: BCCh and FOMC meeting dates (past BCCh meetings regenerated from statements) (`meeting_id`, `decision_date`, optional `effective_date` — defaults to the next CL business day — `has_ipom`, `source`, `confirmed`). Entries sourced from prediction-market rules stay `confirmed: false` until checked against the BCCh calendar.
 - `config/sources.yaml`: base URLs, rate limits, scraper targets.
 - The **Refresh** button on each tab triggers that tab's ingestion jobs, then reloads from DuckDB. Cache with `st.cache_data` using sensible TTLs.
+- **Look & feel:** `.streamlit/config.toml` sets the theme (Chilean flag blue `#0039A6` as primary, Inter / Space Grotesk / JetBrains Mono fonts, light and dark palettes); `app/style.py` adds the header with the flag (an `<img>` data URI, since `st.html` strips inline SVG), flag-blue pill sub-tabs, a faint background glow and hover feedback (honours `prefers-reduced-motion`). Streamlit 1.67 tabs are `[role=tablist] > [data-testid=stTab][aria-selected]`; nested tabs = `[data-testid=stTabs] [data-testid=stTabs]`. Tables with blanks go through `cr_ui.text_table` (st.dataframe renders raw nulls as "None").
 - `src/monitor` is an installed package (src layout); `app/` imports it as `monitor`. App tab modules live in `app/tabs/` (the calendar tab is `calendar_tab.py` to avoid shadowing stdlib `calendar`).
 
 ## Data storage (DuckDB schema)

@@ -9,7 +9,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from charts import CAT, INK, base_layout, line
-from cr_ui import curve_caption, header, pending
+from cr_ui import curve_caption, header, pending, text_table
 from mp_ui import series_caption
 
 from monitor.models import curves as C
@@ -122,7 +122,7 @@ def render() -> None:
         for k, s in {**fwd, **pub}.items()
     ]
     st.dataframe(
-        pd.DataFrame(rows).set_index("forward").style.format({"latest (bp)": "{:.0f}"}, na_rep=""),
+        text_table(pd.DataFrame(rows).set_index("forward"), {"latest (bp)": "{:.0f}"}),
         width="stretch",
     )
     st.caption(

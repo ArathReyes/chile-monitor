@@ -1,4 +1,4 @@
-# Chile Rates Monitor
+# Chile Monitor
 
 A personal Streamlit dashboard for Chilean monetary policy, macro, rates, FX and global macro.
 It uses **public data only**. See `CLAUDE.md` for architecture, data sources and conventions,

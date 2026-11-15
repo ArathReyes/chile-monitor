@@ -7,7 +7,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from charts import CAT, base_layout, line
-from cr_ui import curve_caption, header, pending
+from cr_ui import curve_caption, header, pending, text_table
 
 from monitor.models import curves as C
 
@@ -45,7 +45,11 @@ def stats_table(measures: dict[str, pd.Series]) -> pd.DataFrame:
                 "pct 3Y": s3["pct"],
             }
         )
-    return pd.DataFrame(rows).set_index("measure")
+    out = pd.DataFrame(rows).set_index("measure")
+    for c in ("current (bp)", "z 1Y", "pct 1Y", "z 3Y", "pct 3Y"):
+        if c in out.columns:
+            out[c] = pd.to_numeric(out[c], errors="coerce")  # None -> NaN (blank)
+    return out
 
 
 def _history_chart(series: dict[str, pd.Series], title: str, w: str, colors: list[str]):
@@ -133,7 +137,7 @@ def render() -> None:
         "pct 3Y": "{:.0f}",
     }
     st.dataframe(
-        tbl.style.format({k: v for k, v in fmt.items() if k in tbl.columns}, na_rep=""),
+        text_table(tbl, fmt),
         width="stretch",
     )
     a, b = st.columns(2)

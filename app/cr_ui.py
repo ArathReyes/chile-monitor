@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import cr_data
+import pandas as pd
 import streamlit as st
 from components import source_badge
 from mp_ui import pending  # noqa: F401  (re-exported)
@@ -61,3 +62,20 @@ def no_data(curve: str | None = None) -> bool:
         pending("Curve data not loaded. Press Refresh (runs `monitor.jobs.curves_daily`).")
         return True
     return False
+
+
+def text_table(df, fmt) -> pd.DataFrame:
+    """Numbers preformatted as text, blanks as "–" (st.dataframe shows raw nulls as "None").
+
+    fmt: one format string for every column, or {column: format}; other columns pass through.
+    """
+    out = df.copy().astype(object)
+    for c in out.columns:
+        f = fmt if isinstance(fmt, str) else fmt.get(c)
+        out[c] = [
+            "–"
+            if (v is None or (isinstance(v, float) and pd.isna(v)))
+            else (f.format(v) if f else v)
+            for v in df[c]
+        ]
+    return out

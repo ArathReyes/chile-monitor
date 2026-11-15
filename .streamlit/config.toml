@@ -3,3 +3,30 @@ gatherUsageStats = false
 
 [server]
 headless = true
+
+# Chile Monitor theme: Chilean flag blue (#0039A6) as the accent; app/style.py adds the header,
+# flag-blue sub-tab pills, background glow and hover effects on top of this.
+[theme]
+primaryColor = "#0039A6"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFont = "Space Grotesk:https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap"
+codeFont = "JetBrains Mono:https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap"
+baseRadius = "0.6rem"
+buttonRadius = "full"
+showWidgetBorder = true
+
+[theme.light]
+primaryColor = "#0039A6"
+backgroundColor = "#F5F7FB"
+secondaryBackgroundColor = "#E9EFF9"
+textColor = "#14213D"
+borderColor = "#D5DDEC"
+linkColor = "#0039A6"
+
+[theme.dark]
+primaryColor = "#5B8DEF"
+backgroundColor = "#0B1220"
+secondaryBackgroundColor = "#14203A"
+textColor = "#E6ECF7"
+borderColor = "#25324F"
+linkColor = "#8FB0F5"

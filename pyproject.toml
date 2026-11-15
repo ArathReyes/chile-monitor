@@ -1,7 +1,7 @@
 [project]
 name = "chile-monitor"
 version = "0.1.0"
-description = "Chile Rates Monitor: public-data dashboard for Chilean monetary policy, macro, rates and FX"
+description = "Chile Monitor: public-data dashboard for Chilean monetary policy, macro, rates and FX"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [

@@ -9,7 +9,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from charts import CAT, base_layout, line
-from cr_ui import header, pending
+from cr_ui import header, pending, text_table
 
 from monitor.cl_calendar import business_days
 from monitor.models import curves as C
@@ -90,7 +90,7 @@ def render() -> None:
         f"hidden > {C.MAX_AGE_BD} bd)"
     )
     st.dataframe(
-        cov.style.format({"% days observed (1Y)": "{:.0f}%", "age (bd)": "{:.0f}"}, na_rep=""),
+        text_table(cov, {"% days observed (1Y)": "{:.0f}%", "age (bd)": "{:.0f}"}),
         width="stretch",
         hide_index=True,
     )

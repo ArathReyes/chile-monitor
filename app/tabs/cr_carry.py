@@ -10,7 +10,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from charts import CAT, base_layout
-from cr_ui import curve_caption, header, pending
+from cr_ui import curve_caption, header, pending, text_table
 
 from monitor.models import curves as C
 from monitor.models.uf import uf_accrual_pct
@@ -193,8 +193,11 @@ def render() -> None:
         "(C+R)/vol 1M": "{:+.2f}",
         "(C+R)/vol 3M": "{:+.2f}",
     }
+    show = df[[c for c in cols if c in df.columns]].copy()
+    for c in show.columns[2:]:
+        show[c] = pd.to_numeric(show[c], errors="coerce")  # None -> NaN (blank)
     st.dataframe(
-        df[[c for c in cols if c in df.columns]].style.format(fmt, na_rep=""),
+        text_table(show, fmt),
         width="stretch",
         hide_index=True,
         height=min(38 * (len(df) + 1), 900),
