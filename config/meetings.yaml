@@ -1,0 +1,15 @@
+# Monetary policy meeting calendar. Times are local to the central bank.
+# TODO: populate BCCh RPM dates from bcentral.cl (official annual calendar)
+#       and FOMC dates from federalreserve.gov. Do not enter unconfirmed dates.
+# Entry shape:
+#   - decision_date: 2026-01-27      # date the decision is announced
+#     effective_date: 2026-01-28     # date the new rate applies
+#     announcement_time: "18:00"     # local time (America/Santiago for BCCh)
+#     ipom: false                    # BCCh only: IPoM published around this meeting
+#     notes: ""
+bcch:
+  timezone: America/Santiago
+  meetings: []
+fomc:
+  timezone: America/New_York
+  meetings: []

@@ -1,0 +1,91 @@
+# Base URLs, auth and rate limits. "VERIFY" = not yet confirmed; leave as TODO.
+# min_interval_s: minimum seconds between requests to the same host (scraping rule: >= 1.0).
+defaults:
+  timeout_s: 20
+  min_interval_s: 1.0
+  retries: 3
+  user_agent: "chile-monitor/0.1 (personal research dashboard; public data only)"
+
+sources:
+  bcch:
+    name: BCCh BDE REST API
+    base_url: https://si3.bcentral.cl/SieteRestWS/SieteRestWS.ashx
+    auth: query param "token" = BCCH_API_TOKEN
+    env_key: BCCH_API_TOKEN
+    docs: https://si3.bcentral.cl/estadisticas/Principal1/Web_Services/documentacion.html
+  bcch_web:
+    name: BCCh website
+    base_url: https://www.bcentral.cl
+    env_key: null
+    notes: "TODO VERIFY scraper targets: comunicados, actas/minutas, IPoM, RPM calendar, board."
+  bcch_informativo:
+    name: BCCh Informativo Diario (PDF)
+    base_url: https://si3.bcentral.cl/estadisticas/Diario1/aplicaciones/Informativo/
+    env_key: null
+    notes: "File pattern from an observed example: inf<YYYYMMDD>.pdf (e.g. inf20260724.pdf)."
+  kalshi:
+    name: Kalshi Trade API v2 (public market data)
+    base_url: https://api.elections.kalshi.com/trade-api/v2
+    env_key: null
+    docs: https://docs.kalshi.com/getting_started/quick_start_market_data
+    notes: "BCCh decisions series_ticker KXCBDCHILE."
+  polymarket:
+    name: Polymarket Gamma API
+    base_url: VERIFY  # TODO: confirm Gamma API base and market endpoints from official docs
+    env_key: null
+  fred:
+    name: FRED API
+    base_url: https://api.stlouisfed.org/fred
+    env_key: FRED_API_KEY
+    docs: https://fred.stlouisfed.org/docs/api/fred/
+  yfinance:
+    name: Yahoo Finance via yfinance (unofficial, non-critical)
+    base_url: null
+    env_key: null
+    notes: "Library not installed yet; add when the first spec needs it."
+  banxico:
+    name: Banxico SIE API
+    base_url: https://www.banxico.org.mx/SieteRestAPI/service/v1
+    auth: header "Bmx-Token" = BANXICO_TOKEN
+    env_key: BANXICO_TOKEN
+  bcb:
+    name: BCB SGS (Brazil)
+    base_url: https://api.bcb.gov.br/dados/serie
+    env_key: null
+    notes: "Pattern: /bcdata.sgs.<code>/dados?formato=json"
+  banrep:
+    name: Banco de la República (Colombia)
+    base_url: VERIFY  # TODO: confirm public API/data access for TES yields and policy rate
+    env_key: null
+  hacienda:
+    name: Ministerio de Hacienda, Oficina de la Deuda Pública
+    base_url: https://www.hacienda.cl
+    env_key: null
+    targets:
+      auction_calendar: https://www.hacienda.cl/areas-de-trabajo/finanzas-internacionales/oficina-de-la-deuda-publica/plan-emision/calendario-de-licitaciones
+      soma_results: https://www.hacienda.cl/areas-de-trabajo/finanzas-internacionales/oficina-de-la-deuda-publica/colocaciones-bcch-soma
+  ine:
+    name: INE Chile
+    base_url: https://www.ine.gob.cl
+    env_key: null
+    notes: "TODO VERIFY release-calendar page URL."
+  fiscaldata:
+    name: US Treasury FiscalData
+    base_url: https://api.fiscaldata.treasury.gov/services/api/fiscal_service
+    env_key: null
+  eia:
+    name: EIA API v2 (optional)
+    base_url: https://api.eia.gov/v2
+    env_key: EIA_API_KEY
+  cochilco:
+    name: Cochilco
+    base_url: VERIFY  # TODO: confirm access to production statistics
+    env_key: null
+  spensiones:
+    name: Superintendencia de Pensiones (AFP flows)
+    base_url: VERIFY  # TODO: confirm monthly data location
+    env_key: null
+  anthropic:
+    name: Anthropic API (optional, paid)
+    base_url: null
+    env_key: ANTHROPIC_API_KEY

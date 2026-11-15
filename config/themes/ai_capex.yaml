@@ -1,0 +1,14 @@
+id: ai_capex
+title: AI capex borrowing
+thesis: >
+  Hyperscaler capex financed in credit markets adds IG supply and term premium at the long end
+  of the UST curve, which transmits to Chilean long rates. Copper demand from data centers is a
+  second channel to CLP.
+indicators:
+  - {source: fred, code: BAMLC0A0CM, label: ICE BofA US Corporate OAS}
+  - {source: fred, code: DGS10, label: UST 10y}
+  - {source: yfinance, code: HG=F, label: COMEX copper}
+  - {source: yfinance, code: NVDA, label: NVIDIA}
+questions:
+  - Is long-end UST term premium moving with IG issuance?
+  - Is copper pricing data-center demand?

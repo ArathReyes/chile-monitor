@@ -1,0 +1,14 @@
+id: oil_middle_east
+title: Oil shock / Middle East
+thesis: >
+  Supply disruption risk lifts crude, feeding Chilean CPI through fuel prices (MEPCO smooths
+  pass-through) and pressuring CLP via terms of trade. Watch breakevens and UF carry.
+indicators:
+  - {source: yfinance, code: BZ=F, label: Brent front month}
+  - {source: yfinance, code: CL=F, label: WTI front month}
+  - {source: fred, code: DCOILBRENTEU, label: Brent spot (FRED, daily)}
+  - {source: fred, code: T10YIE, label: US 10y breakeven}
+  - {source: eia, code: VERIFY, label: US crude inventories}  # TODO VERIFY EIA series id
+questions:
+  - How much of the next CPI print is fuel?
+  - Is CLP trading the oil move or the copper move?

@@ -1,0 +1,105 @@
+# Series registry. Adding a series = adding an entry here.
+# verified: true only when the code was confirmed against the source
+# (BDE: monitor.sources.bcch.search_series, or an official doc example).
+# source_code "VERIFY" = unknown; jobs must skip it until filled in.
+series:
+  - series_id: cl_tpm
+    source: bcch
+    source_code: F022.TPM.TIN.D001.NO.Z.D
+    name: Tasa de Política Monetaria (TPM)
+    freq: D
+    unit: pct
+    tab: monetary_policy
+    transform: level
+    verified: true
+    notes: Code and description confirmed by the GetSeries example in the official BDE REST docs.
+
+  - series_id: cl_spc_nom_10y
+    source: bcch
+    source_code: F022.SPC.TIN.AN10.NO.Z.D
+    name: SPC nominal 10y
+    freq: D
+    unit: pct
+    tab: curves_rates
+    transform: level
+    verified: true  # confirmed via SearchSeries 2026-11-14
+    notes: 1y-10y tenor table, 365-day basis, closing data.
+
+  - series_id: cl_spc_uf_2y
+    source: bcch
+    source_code: F022.SPC.TIN.AN02.UF.Z.D
+    name: SPC UF 2y
+    freq: D
+    unit: pct
+    tab: curves_rates
+    transform: level
+    verified: true  # confirmed via SearchSeries 2026-11-14
+    notes: Real (UF) Cámara swap, 365-day basis, closing data.
+
+  - series_id: cl_spc_nom_90d
+    source: bcch
+    source_code: F022.SPC.TPR.D090.NO.Z.D
+    name: SPC nominal 90d traded
+    freq: D
+    unit: pct
+    tab: monetary_policy
+    transform: level
+    verified: true  # confirmed via SearchSeries 2026-11-14
+    notes: Traded rate, 360-day simple basis, T-1. Harmonize basis before mixing with tenor table.
+
+  - series_id: cl_spc_nom_360d
+    source: bcch
+    source_code: F022.SPC.TPR.D360.NO.Z.D
+    name: SPC nominal 360d traded
+    freq: D
+    unit: pct
+    tab: monetary_policy
+    transform: level
+    verified: true  # confirmed via SearchSeries 2026-11-14
+    notes: Traded rate, 360-day simple basis, T-1.
+
+  - series_id: cl_imacec
+    source: bcch
+    source_code: F032.IMC.IND.Z.Z.EP18.Z.Z.0.M
+    name: IMACEC empalmado, serie original (2018=100)
+    freq: M
+    unit: index
+    tab: chile_macro
+    transform: level
+    verified: true  # confirmed via SearchSeries 2026-11-14
+    notes: >-
+      Reference year 2018 is still current for IMACEC. SA variant: F032.IMC.IND.Z.Z.EP18.Z.Z.1.M;
+      non-mining: ...EP18.N03.Z.0.M; mining: ...EP18.03.Z.0.M.
+
+  - series_id: cl_cpi
+    source: bcch
+    source_code: F074.IPC.IND.Z.2023.C.M
+    name: IPC General (Prom. 2023=100), INE
+    freq: M
+    unit: index
+    tab: chile_macro
+    transform: level
+    verified: true  # confirmed via SearchSeries 2026-11-14
+    notes: >-
+      Official INE index. BCCh-spliced alternative with long history: G073.IPC.IND.2023.M
+      (IPC Analíticos family, also has SAE/volátiles splits). Divisions: F074.IPC.IND.DIV*.2023.C.M.
+
+  - series_id: us_ust_10y
+    source: fred
+    source_code: DGS10
+    name: UST 10y constant maturity
+    freq: D
+    unit: pct
+    tab: global_macro
+    transform: level
+    verified: true
+
+  - series_id: us_ust_2y
+    source: fred
+    source_code: DGS2
+    name: UST 2y constant maturity
+    freq: D
+    unit: pct
+    tab: global_macro
+    transform: level
+    verified: true
