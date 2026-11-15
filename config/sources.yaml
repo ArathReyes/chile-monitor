@@ -17,7 +17,7 @@ sources:
     name: BCCh website
     base_url: https://www.bcentral.cl
     env_key: null
-    notes: "TODO VERIFY scraper targets: comunicados, actas/minutas, IPoM, RPM calendar, board."
+    notes: "Bot-protected (Incapsula) + robots.txt disallows RPM pages: manual save workflow, see docs/manual-data.md."
   bcch_informativo:
     name: BCCh Informativo Diario (PDF)
     base_url: https://si3.bcentral.cl/estadisticas/Diario1/aplicaciones/Informativo/
@@ -31,7 +31,7 @@ sources:
     notes: "BCCh decisions series_ticker KXCBDCHILE."
   polymarket:
     name: Polymarket Gamma API
-    base_url: VERIFY  # TODO: confirm Gamma API base and market endpoints from official docs
+    base_url: https://gamma-api.polymarket.com  # /public-search, /events?slug= verified 2026-11-14
     env_key: null
   fred:
     name: FRED API
@@ -85,7 +85,3 @@ sources:
     name: Superintendencia de Pensiones (AFP flows)
     base_url: VERIFY  # TODO: confirm monthly data location
     env_key: null
-  anthropic:
-    name: Anthropic API (optional, paid)
-    base_url: null
-    env_key: ANTHROPIC_API_KEY

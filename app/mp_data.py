@@ -326,3 +326,16 @@ def refresh(markets: bool = True, bde: bool = True) -> dict[str, object]:
         out["markets"] = snapshot_markets.run(candles=True)
     st.cache_data.clear()
     return out
+
+
+@st.cache_data(ttl=TTL)
+def eee_distribution() -> pd.DataFrame:
+    """TPM rows from parsed EEE results PDFs (empty until PDFs are saved manually)."""
+    conn = storage.connect()
+    try:
+        df = storage.read_survey_distribution(conn, "EEE")
+    finally:
+        conn.close()
+    if df.empty:
+        return df
+    return df[df["section"].str.contains("Pol[ií]tica", regex=True)].reset_index(drop=True)

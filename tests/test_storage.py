@@ -115,3 +115,11 @@ def test_is_stale():
     assert not is_stale(date(2026, 10, 1), "M", today)
     assert is_stale(date(2026, 8, 1), "M", today)
     assert is_stale(None, "M", today)
+
+
+def test_reads_then_upsert_on_same_connection(conn):
+    """Regression: DuckDB 2.x fetchone() left results open and broke the next statement."""
+    storage.upsert_observations(conn, _obs(("x", date(2026, 1, 1), 1.0)), "s")
+    assert storage.last_obs_date(conn, "x") == date(2026, 1, 1)
+    assert storage.last_fetched(conn, ["x"]) is not None
+    assert storage.upsert_observations(conn, _obs(("x", date(2026, 1, 2), 2.0)), "s") == 1

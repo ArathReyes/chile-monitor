@@ -14,7 +14,9 @@ A personal web dashboard for an EM macro rates trader in NYC focused on Chile. I
 - **httpx** + **tenacity** for HTTP with retries; **BeautifulSoup/lxml** for HTML; **pdfplumber** for PDFs; **Playwright** only if a page truly needs JavaScript (ask first).
 - **pandas / numpy / scipy / statsmodels** for analytics.
 - **pydantic** for config models, **PyYAML** for the YAML registry, **python-dotenv** for `.env`.
+- **holidays** (country CL, categories public + bank) for the Chilean business-day calendar (`src/monitor/cl_calendar.py`).
 - **pytest** + **ruff** for quality.
+- **No paid APIs.** The Anthropic API is not used (decision 2026-11-14): no LLM scoring or summaries.
 - Scheduling: GitHub Actions cron (later) or local `uv run python -m monitor.jobs.<job>`.
 
 ## Architecture
@@ -26,7 +28,7 @@ Sources (APIs, scrapers) → src/monitor/sources/*  (one module per source, retu
                                                    except through the Refresh action, which calls the jobs layer)
 ```
 - `config/series.yaml` is the **series registry**: every time series the app uses, with source, source code, frequency, unit, tab and transform. Adding a series = editing YAML, not code. Entries carry `verified: true|false`; unverified codes must be confirmed before a job relies on them.
-- `config/meetings.yaml`: BCCh and FOMC meeting dates (decision date, effective date).
+- `config/meetings.yaml`: BCCh and FOMC meeting dates (`meeting_id`, `decision_date`, optional `effective_date` — defaults to the next CL business day — `has_ipom`, `source`, `confirmed`). Entries sourced from prediction-market rules stay `confirmed: false` until checked against the BCCh calendar.
 - `config/sources.yaml`: base URLs, rate limits, scraper targets.
 - The **Refresh** button on each tab triggers that tab's ingestion jobs, then reloads from DuckDB. Cache with `st.cache_data` using sensible TTLs.
 - `src/monitor` is an installed package (src layout); `app/` imports it as `monitor`. App tab modules live in `app/tabs/` (the calendar tab is `calendar_tab.py` to avoid shadowing stdlib `calendar`).
@@ -34,8 +36,9 @@ Sources (APIs, scrapers) → src/monitor/sources/*  (one module per source, retu
 ## Data storage (DuckDB schema)
 - `series_meta(series_id PK, source, source_code, name, freq, unit, tab, transform, notes)`
 - `observations(series_id, obs_date, value, source, fetched_at)`. Upsert on (series_id, obs_date). Also append to `observations_history(series_id, obs_date, value, source, fetched_at)` whenever a value is new or changes, which keeps **data vintages** (needed for IMACEC/CPI revisions and surprise calculations).
-- `market_snapshots(source, ticker, snapshot_ts, payload_json)`: Kalshi/Polymarket order-book and price snapshots.
-- `documents(doc_id PK, kind, institution, published_at, title, url, raw_path, text, sha256)`: BCCh statements, minutes, IPoM, Hacienda calendars.
+- `market_snapshots(source, ticker, snapshot_ts, payload_json)`: Kalshi/Polymarket outcome snapshots (`source` kalshi / polymarket, ticker = event, payload `{"outcomes": [...]}`) and Kalshi daily candles (`source` kalshi_candles, ticker = market).
+- `documents(doc_id PK, kind, institution, meeting_id, published_at, title, url, raw_path, text, sha256)`: BCCh statements, minutes, IPoM, Hacienda calendars.
+- `survey_distribution(survey, survey_month, section_no, section, horizon, median, p10, p90, n, doc_sha256)`: EEE results-PDF summary table (deciles, respondent counts, next/following-meeting TPM).
 - `auctions(...)`: Treasury auction calendar and results (Bond Monitor, later). Provisional columns exist; finalize in the Bond Monitor spec.
 - `ingest_log(job, source, started_at, finished_at, status, rows, error)`: drives the Data Health tab.
 - Raw downloads (HTML, PDF, JSON) are saved under `data/raw/<source>/<date>/` so parsers can be re-run without re-fetching.
@@ -53,6 +56,7 @@ Sources (APIs, scrapers) → src/monitor/sources/*  (one module per source, retu
 - Logging with the stdlib `logging` module. Every job writes to `ingest_log`.
 - Tests: pytest. Source parsers are tested against **saved fixtures** in `tests/fixtures/`, not live calls. Mark live-API tests `@pytest.mark.live`.
 - Keep functions small. Run `ruff check` and `ruff format` before finishing a task.
+- DuckDB 2.x: never use `fetchone()` (it leaves the result open and blocks the next statement on the connection); use `storage._first()` / `fetchall()`. DuckDB returns DATE columns to pandas as `datetime64`.
 
 ## Web scraping rules
 - Prefer official APIs. Scrape only when no API exists.
@@ -60,15 +64,17 @@ Sources (APIs, scrapers) → src/monitor/sources/*  (one module per source, retu
 - Use `httpx` + BeautifulSoup first, and Playwright only if the content is rendered by JavaScript.
 - Parsers must fail loudly when the page structure changes: raise, log, and show the stale badge. Never return partial garbage.
 - Store the original document (`data/raw/...`) plus a sha256 hash, so changes to documents like the Hacienda calendar can be detected and diffed.
+- **Never work around bot protection** (challenge pages, CAPTCHAs, WAFs). If a site blocks automated access, switch to a manual-download workflow.
+- **www.bcentral.cl:** HTML pages are behind Imperva Incapsula and robots.txt disallows `/*reunion-de-politica-monetaria-rpm*`, `/*buscador*`, `/*search*` (and the new-search variants). Pages are saved manually into `data/manual/bcch_web/<kind>/` (see `docs/manual-data.md`); `sources/bcch_web.py` extracts `/documents/` links from them and downloads those files (allowed, served normally).
 
 ## Data sources
 | Source | Access | Key | Used for |
 |---|---|---|---|
 | BCCh Base de Datos Estadísticos (BDE) API | REST `https://si3.bcentral.cl/SieteRestWS/SieteRestWS.ashx?token=…&function=GetSeries\|SearchSeries` (httpx, no wrapper lib) | `BCCH_API_TOKEN` (free, 1-year validity) | TPM, CPI, IMACEC, UF, USD/CLP, Cámara swaps (SPC), BCP/BTP/BCU/BTU secondary rates, EEE/EOF surveys, derivatives positioning |
-| BCCh website (bcentral.cl) | scraping | none | Policy statements (comunicados), minutes (actas/minutas), IPoM, meeting calendar, board members, survey PDFs |
+| BCCh website (bcentral.cl) | **manual save** of pages/PDFs → `bcch_web.py` parses links, downloads `/documents/` files | none | Policy statements, minutes, IPoM, meeting calendar, board members, EEE results PDFs |
 | BCCh Informativo Diario (daily PDF) | pdfplumber | none | T-1 SPC and bond rates, deposit rates, BCCh/Treasury auction results, FX market flows |
-| Kalshi Trade API v2 | REST, public market data | none for reads | BCCh decisions (series `KXCBDCHILE`), Fed decisions, US CPI/NFP markets, candlestick history |
-| Polymarket (Gamma API) | REST, public | none | Second prediction-market source (VERIFY endpoints) |
+| Kalshi Trade API v2 | REST `https://external-api.kalshi.com/trade-api/v2` (fallback `api.elections.kalshi.com`), public | none for reads | BCCh decisions (`KXCBDCHILE`; outcomes C25P/C25/HOLD/H25/H25P, dollar-string prices), candlesticks `/series/{s}/markets/{m}/candlesticks` |
+| Polymarket (Gamma API) | REST `https://gamma-api.polymarket.com` `/public-search?q=`, `/events?slug=` (verified 2026-11-14) | none | BCCh decision events `central-bank-of-chile-decision-in-<month>-<year>`; outcomes by `groupItemTitle`; often illiquid (quality flag) |
 | FRED | REST | `FRED_API_KEY` (free) | UST yields, SOFR, CPI, PCE, NFP, GDP, breakevens, financial conditions |
 | yfinance | Python lib (unofficial) | none | Copper (HG=F), Brent (BZ=F), WTI, DXY, VIX, ETFs; may break, so treat it as non-critical |
 | Banxico SIE API | REST | `BANXICO_TOKEN` (free) | Mexico policy rate, Mbono yields (transmission panel) |
@@ -78,16 +84,14 @@ Sources (APIs, scrapers) → src/monitor/sources/*  (one module per source, retu
 | INE Chile | scraping | none | Release calendar (CPI, labor) |
 | US Treasury FiscalData | REST | none | UST auction calendar (optional) |
 | EIA | REST | `EIA_API_KEY` (free, optional) | Oil inventories (Thematic) |
-| Anthropic API | `anthropic` SDK | `ANTHROPIC_API_KEY` (paid, optional) | Hawk/dove scoring, statement summaries; features must degrade gracefully without the key |
 
 BDE REST notes: request dates `firstdate`/`lastdate` are `YYYY-MM-DD`; response `Obs[].indexDateString` is `DD-MM-YYYY`, `value` is a string (`"NaN"` with `statusCode: "ND"` = missing, drop it, never fill). SearchSeries needs `frequency` (DAILY, MONTHLY, QUARTERLY, ANNUAL) and returns `SeriesInfos[]`. Responses are `charset=ISO-8859-1`: parse with `json.loads(resp.text)`, never `resp.json()`.
 
 ## Tabs (status: placeholder unless noted)
-1. **Monetary Policy** (sub-tabs: Overview · Board & Communication · Decision History · Implied Path & Probabilities · Surveys)
-   - Board members and tenures, statement archive with a diff viewer vs the previous statement, minutes, vote record and dissents. Source: bcentral.cl scraping.
-   - Hawk/dove score per statement and minutes (Anthropic API, optional).
-   - Decision history with surprise vs EEE/EOF consensus. Source: BDE (TPM, surveys) + meetings.yaml.
-   - Implied TPM path from Cámara swaps (BDE, T-1 close) + Kalshi `KXCBDCHILE` (live) + Polymarket, overlaid with EEE/EOF medians and the IPoM TPM corridor.
+1. **Monetary Policy** (implemented, spec 01; sub-tabs: Overview · Board & Communication · Decision History · Implied Path & Probabilities · Surveys). Code: `app/tabs/monetary_policy.py`, `app/tabs/mp_*.py`, data layer `app/mp_data.py`, models `models/tpm_implied.py`, `models/surprises.py`, `models/prediction_markets.py`, `models/text_analysis.py`; jobs `jobs/mp_daily.py`, `jobs/bcch_series.py`, `jobs/snapshot_markets.py` (hourly).
+   - Implemented: Overview KPIs, implied path (SPC + EOF prior + Kalshi anchor) with probabilities and diagnostics, Kalshi/Polymarket panels, decision history (from TPM changes + meetings.yaml) with EOF/EEE surprises, EEE/EOF survey charts, EEE decile table once PDFs are saved.
+   - Pending manual documents: board cards, statement archive + diff (engine ready), minutes, vote record/dissents (regex to be built on real statements), IPoM corridor. Hawk/dove: no LLM; the EOF statement-bias series (`eof_statement_bias`) is shown but its scale is unconfirmed.
+   - Pending full meeting calendar: hold meetings in history, survey-vs-market panel.
 2. **Chile Macro**: CPI headline, core (IPC SAE), goods/services; IMACEC (mining vs non-mining, 3m/3m SAAR); labor; trade; USD/CLP dólar observado. Tools: **UF carry calculator**, **CPI seasonality/nowcast table**, **surprise index** (actual minus EEE median), data vintages. Source: BDE API; INE calendar.
 3. **Curves & Rates**: nominal BCP/BTP and real BCU/BTU curves, breakevens, SPC curve (nominal and UF), 1d/1w/1m changes, carry/rolldown, spread vs UST. Source: BDE (daily, T-1, transaction-based with gaps) + Informativo Diario; FRED for UST.
 4. **FX & Flows**: USD/CLP, BCCh FX operations, formal FX market flows, non-resident SPC positioning (BDE daily derivatives tables), AFP flows (Superintendencia de Pensiones, monthly, VERIFY). Source: BDE, Informativo Diario.
@@ -95,7 +99,7 @@ BDE REST notes: request dates `firstdate`/`lastdate` are `YYYY-MM-DD`; response 
 6. **Calendar**: BCCh meetings, IPoM, INE releases, Hacienda auctions, US releases, FOMC; each with consensus and last surprise. Source: meetings.yaml, INE/BCCh/Hacienda scraping, FRED release dates.
 7. **Bond Monitor** (pinned, later): Hacienda auction calendar auto-scraped (bond, date, size), auction results (bid-to-cover, allocation by banks/AFPs/others), DV01 per auction computed from the bond master (coupon, maturity from the nemotécnico) and BDE yields, weekly DV01 supply. Source: Hacienda ODP pages, Informativo Diario, BDE.
 8. **Copper**: COMEX price, copper–CLP rolling beta, China indicators, Cochilco production (VERIFY access). Source: yfinance, BDE, Cochilco.
-9. **Thematic**: config-driven theme cards (`config/themes/*.yaml`): Oil shock / Middle East, AI capex borrowing, etc. Source: yfinance, FRED, EIA, plus Claude-written summaries (optional).
+9. **Thematic**: config-driven theme cards (`config/themes/*.yaml`): Oil shock / Middle East, AI capex borrowing, etc. Source: yfinance, FRED, EIA.
 10. **Data Health** (implemented): last successful fetch per source and series, staleness vs expected frequency, recent errors (from `ingest_log`).
 
 ## Key domain notes
@@ -104,7 +108,15 @@ BDE REST notes: request dates `firstdate`/`lastdate` are `YYYY-MM-DD`; response 
 - UF = Unidad de Fomento, an inflation-indexed unit; its daily path for the next month is fixed by the latest CPI print.
 - BCCh CPI reference series is in **base 2023=100** since Jan 2024. Old base-2018 codes return no recent data. Official INE headline: `F074.IPC.IND.Z.2023.C.M`; BCCh-spliced analytics family (SAE, volátiles, goods/services): `G073.*.2023.M`.
 - IMACEC is still on national-accounts **reference 2018** (`F032.IMC.IND.Z.Z.EP18.*`).
-- EEE = Encuesta de Expectativas Económicas (monthly, includes TPM at next/subsequent meeting, 5m, 11m, 23m). EOF = Encuesta de Operadores Financieros (before and after each RPM).
+- EEE = Encuesta de Expectativas Económicas (monthly). BDE series `F089.TPM.TAS.*`: this month (11), next month (31), 5m (26), 11m (14), 17m (30), 23m (15), 35m, long run (LP), Dec-of-year (2026, 2027); **no next-meeting series in the BDE** — the "siguiente / subsiguiente reunión" horizons and deciles are only in the results PDF (`sources/eee_pdf.py`).
+- EOF = Encuesta de Operadores Financieros, ~2 rounds per meeting cycle, BDE `F089.EOF.TPM.*` dated by survey date: MA (próxima RPM), 1REU, 3MS (2 meetings ahead), 3REU, 6MS (4 ahead), 12MS, 24MS. Pre-round "1REU" and post-round "MA" target the same next meeting.
+- TIB (overnight interbank average) `F022.TIB.TIP.D001.NO.Z.D`; core CPI `F074.IPCSAE.IND.Z.2023.C.M` (spliced from 2009: `F074.IPCSAE.IND.Z.EP23.Z.M`).
+
+## Implied-path model assumptions (models/tpm_implied.py)
+- TPM steps on effective dates = decision + 1 CL business day; overnight = TPM + spread (spread = 20-day average TIB − TPM).
+- Cámara index compounds business-day rates over calendar days, ACT/360. Swaps ≤ 1y: single payment, simple ACT/360. Swaps > 1y: **semiannual coupons, ACT/360** (confirmed by the user 2026-11-14), discounted on the same curve.
+- BDE tenor-table quotes (365 basis) are converted ×360/365; traded 90/180/360d are already 360. Swaps start on their quote date (spot lag 0, assumption).
+- Defaults: N = 8 steps (known meetings, padded with an unscheduled monthly grid, flagged), λ = 0.005 (EOF prior), μ = 0.25 (smoothness), Kalshi anchor on meeting 1 (weight 4, only when liquid), 2y off by default (flat tail after the last step makes it a weak constraint). With 3 short swaps for 8 unknowns, later meetings lean on prior/smoothness — the UI says so.
 
 ## How to work in this repo
 - Specs for each feature live in `docs/specs/NN-*.md`. Implement one spec per session.

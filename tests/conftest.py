@@ -12,3 +12,11 @@ def load_fixture():
         return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
     return _load
+
+
+@pytest.fixture
+def load_text_fixture():
+    def _load(name: str) -> str:
+        return (FIXTURES / name).read_text(encoding="utf-8")
+
+    return _load

@@ -33,6 +33,47 @@ def _lines(spec, start, title) -> go.Figure:
     return base_layout(fig, title, "TPM, %", 340)
 
 
+def _eee_distribution() -> None:
+    d = mp_data.eee_distribution()
+    if d.empty:
+        pending(
+            "Decile 1 / decile 9 and respondent counts (plus the 'next' and 'following "
+            "meeting' horizons) come from the monthly EEE results PDF: save it into "
+            "`data/manual/bcch_web/surveys/` and press Refresh in Data Health or run "
+            "`uv run python -m monitor.jobs.mp_daily`."
+        )
+        return
+    last_m = d["survey_month"].max()
+    t = d[d["survey_month"] == last_m]
+    fig = go.Figure(
+        go.Scatter(
+            x=t["horizon"],
+            y=t["median"],
+            mode="markers",
+            name="Median",
+            marker=dict(size=10, color=ROLE["eee"], line=dict(width=2, color="white")),
+            error_y=dict(
+                type="data",
+                symmetric=False,
+                array=t["p90"] - t["median"],
+                arrayminus=t["median"] - t["p10"],
+                color=ROLE["eee"],
+                thickness=2,
+            ),
+            customdata=t[["p10", "p90", "n"]],
+            hovertemplate="%{x}<br>median %{y:.2f}% · p10 %{customdata[0]:.2f} · "
+            "p90 %{customdata[1]:.2f} · n=%{customdata[2]}<extra></extra>",
+        )
+    )
+    fig.update_layout(hovermode="closest", showlegend=False)
+    st.plotly_chart(
+        base_layout(fig, f"EEE {last_m:%B %Y}: TPM median with decile 1–9 range", "TPM, %", 320),
+        width="stretch",
+    )
+    st.dataframe(t[["horizon", "median", "p10", "p90", "n"]], hide_index=True, width="stretch")
+    st.caption("Source: BCCh EEE results PDF (saved manually), first-page summary table.")
+
+
 def eof_shift_after_meetings(tab: pd.DataFrame, window: int = 25) -> pd.DataFrame:
     """For each decision: EOF round before ('1 reunión adelante') vs after ('próxima RPM').
 

@@ -1,0 +1,58 @@
+ENCUESTA DE EXPECTATIVAS ECONÓMICAS Octubre 2026
+Enviada el: 5 Octubre 2026
+Plazo de recepción: 9 Octubre 2026
+Ver
+Variable Mediana Decil 1 Decil 9 N° respuestas gráfico
+01.Inflación (variaciones IPCen%)
+En el mes 0,40 0,20 0,60 48 Graf1
+El próximo mes 0,30 0,10 0,50 47 Graf2
+En 11 meses (var. 12 meses) 3,40 3,00 3,90 47 Graf3
+En 23 meses (var. 12 meses) 3,00 3,00 3,30 48 Graf4
+En 35 meses (var. 12 meses) 3,00 3,00 3,20 48 Graf5
+Diciembre 2026 4,60 4,30 5,00 49 Graf6
+Diciembre 2027 3,00 3,00 3,50 49 Graf7
+02.Inflación sinvolátiles (variaciones IPCen%)(**)
+En el mes 0,20 0,10 0,30 41 Graf8
+El próximo mes 0,20 0,10 0,30 40 Graf9
+En 11 meses (var. 12 meses) 3,20 3,00 3,80 39 Graf10
+En 23 meses (var. 12 meses) 3,00 3,00 3,20 40 Graf11
+En 35 meses (var. 12 meses) 3,00 3,00 3,10 39 Graf12
+Diciembre 2026 3,50 3,20 4,00 40 Graf13
+Diciembre 2027 3,00 3,00 3,50 40 Graf14
+03.TasadePolítica Monetaria (*)
+En la siguiente reunión 4,50 4,50 4,50 49 Graf15
+En la subsiguiente reunión 4,50 4,50 4,50 49 Graf16
+En 5 meses 4,50 4,25 4,50 49 Graf17
+Diciembre 2026 4,50 4,50 4,50 49 Graf18
+Dentro de 11 meses 4,50 4,25 5,00 49 Graf19
+Dentro de 17 meses 4,50 4,00 5,00 48 Graf20
+Dentro de 23 meses 4,50 4,00 5,00 48 Graf21
+Dentro de 35 meses 4,25 4,00 4,75 48 Graf22
+04.Tipo deCambio ($porUS$1)(*)
+Dentro de 2 meses 950,00 930,00 980,00 47 Graf23
+Dentro de 11 meses 910,00 880,00 950,00 47 Graf24
+Dentro de 23 meses 900,00 850,00 950,00 47 Graf25
+05.IMACEC (variaciones 12meses)
+Un mes atrás 0,10 -0,80 1,30 45 Graf26
+06.IMACECNoMinero(variaciones 12meses)
+Un mes atrás 1,00 0,40 1,70 38 Graf27
+07.PIB (variaciones 12meses)
+En el trimestre calendario de la encuesta 1,30 -0,30 2,60 45 Graf28
+Diciembre 2026 0,20 -0,20 0,60 47 Graf29
+Diciembre 2027 3,00 2,50 3,50 47 Graf30
+Diciembre 2028 2,70 2,30 3,20 46 Graf31
+08.PIBNoMinero(variaciones 12meses)
+En el trimestre calendario de la encuesta 1,60 0,50 2,70 38 Graf32
+Diciembre 2026 0,90 0,60 1,50 38 Graf33
+Diciembre 2027 2,90 2,40 3,30 38 Graf34
+Diciembre 2028 2,70 2,40 3,20 36 Graf35
+09.Consumo delos HogareseIPSFL (variaciones 12meses)
+Diciembre 2026 1,50 0,70 2,00 40 Graf36
+Diciembre 2027 2,50 2,10 3,00 40 Graf37
+10.FormaciónBrutadeCapital Fijo (variaciones 12meses)
+Diciembre 2026 0,30 -0,50 4,30 40 Graf38
+Diciembre 2027 5,80 3,50 7,90 40 Graf39
+(*) Fines de mes.
+Encuesta mensual a un selecto grupo de académicos, consultores y ejecutivos o asesores de instituciones financieras.Se cierra al día siguiente de conocerse el IPC del mes anterior y los resultados se publican al día
+siguiente de su recepción, a las 8:30 hrs.aproximadamente (www.bcentral.cl, en Áreas Estadísticas, Encuestas Económicas, link https://www.bcentral.cl/web/banco-central/areas/encuestas-economicas).
+El período de levantamiento comprende la semana previa a la publicación

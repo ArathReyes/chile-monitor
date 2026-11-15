@@ -90,6 +90,19 @@ CREATE TABLE IF NOT EXISTS auctions (
     fetched_at     TIMESTAMP,
     details_json   JSON
 );
+CREATE TABLE IF NOT EXISTS survey_distribution (
+    survey       VARCHAR NOT NULL,   -- 'EEE'
+    survey_month DATE NOT NULL,
+    section_no   VARCHAR,
+    section      VARCHAR NOT NULL,
+    horizon      VARCHAR NOT NULL,
+    median       DOUBLE,
+    p10          DOUBLE,
+    p90          DOUBLE,
+    n            INTEGER,
+    doc_sha256   VARCHAR,
+    PRIMARY KEY (survey, survey_month, section, horizon)
+);
 CREATE TABLE IF NOT EXISTS ingest_log (
     job         VARCHAR NOT NULL,
     source      VARCHAR NOT NULL,
@@ -100,6 +113,16 @@ CREATE TABLE IF NOT EXISTS ingest_log (
     error       VARCHAR
 );
 """
+
+
+def _first(conn: duckdb.DuckDBPyConnection, sql: str, params: list[Any] | None = None) -> Any:
+    """First column of the first row, reading the result to completion.
+
+    DuckDB 2.x keeps a result open after fetchone(), blocking the next statement on the
+    same connection, so never use fetchone() here.
+    """
+    rows = conn.execute(sql, params or []).fetchall()
+    return rows[0][0] if rows else None
 
 
 def utcnow() -> datetime:
@@ -180,15 +203,16 @@ def upsert_observations(
     conn.register("_incoming", obs)
     try:
         conn.execute("BEGIN")
-        changed = conn.execute(
+        changed = _first(
+            conn,
             """
             INSERT INTO observations_history
             SELECT i.series_id, i.obs_date, i.value, i.source, i.fetched_at
             FROM _incoming i
             LEFT JOIN observations o USING (series_id, obs_date)
             WHERE o.value IS DISTINCT FROM i.value
-            """
-        ).fetchone()[0]
+            """,
+        )
         conn.execute(
             """
             INSERT INTO observations
@@ -238,17 +262,13 @@ def read_wide(
 
 
 def last_fetched(conn: duckdb.DuckDBPyConnection, series_ids: list[str]) -> datetime | None:
-    row = conn.execute(
-        "SELECT max(fetched_at) FROM observations WHERE series_id IN ?", [series_ids]
-    ).fetchone()
-    return row[0] if row else None
+    return _first(
+        conn, "SELECT max(fetched_at) FROM observations WHERE series_id IN ?", [series_ids]
+    )
 
 
 def last_obs_date(conn: duckdb.DuckDBPyConnection, series_id: str) -> date | None:
-    row = conn.execute(
-        "SELECT max(obs_date) FROM observations WHERE series_id = ?", [series_id]
-    ).fetchone()
-    return row[0] if row else None
+    return _first(conn, "SELECT max(obs_date) FROM observations WHERE series_id = ?", [series_id])
 
 
 def read_vintages(conn: duckdb.DuckDBPyConnection, series_id: str) -> pd.DataFrame:
@@ -256,6 +276,67 @@ def read_vintages(conn: duckdb.DuckDBPyConnection, series_id: str) -> pd.DataFra
         "SELECT obs_date, value, fetched_at FROM observations_history "
         "WHERE series_id = ? ORDER BY obs_date, fetched_at",
         [series_id],
+    ).df()
+
+
+# ------------------------------------------------------------------ documents
+
+
+def upsert_document(conn: duckdb.DuckDBPyConnection, **row: Any) -> None:
+    cols = ["doc_id", "kind", "institution", "meeting_id", "published_at", "title", "url",
+            "raw_path", "text", "sha256"]  # fmt: skip
+    conn.execute(
+        f"INSERT INTO documents ({', '.join(cols)}) VALUES ({', '.join('?' * len(cols))}) "
+        "ON CONFLICT (doc_id) DO UPDATE SET title = excluded.title, url = excluded.url, "
+        "published_at = excluded.published_at, raw_path = excluded.raw_path, "
+        "text = excluded.text",
+        [row.get(c) for c in cols],
+    )
+
+
+def document_urls(conn: duckdb.DuckDBPyConnection) -> set[str]:
+    return {
+        r[0] for r in conn.execute("SELECT url FROM documents WHERE url IS NOT NULL").fetchall()
+    }
+
+
+def document_shas(conn: duckdb.DuckDBPyConnection) -> set[str]:
+    return {r[0] for r in conn.execute("SELECT sha256 FROM documents").fetchall()}
+
+
+def read_documents(conn: duckdb.DuckDBPyConnection, kind: str | None = None) -> pd.DataFrame:
+    q = "SELECT doc_id, kind, meeting_id, published_at, title, url, sha256, text FROM documents"
+    params: list[Any] = []
+    if kind:
+        q += " WHERE kind = ?"
+        params.append(kind)
+    return conn.execute(q + " ORDER BY published_at NULLS LAST", params).df()
+
+
+def upsert_survey_distribution(
+    conn: duckdb.DuckDBPyConnection, df: pd.DataFrame, doc_sha256: str | None
+) -> int:
+    if df.empty:
+        return 0
+    d = df.copy()
+    d["doc_sha256"] = doc_sha256
+    conn.register("_sd", d)
+    try:
+        conn.execute(
+            "INSERT INTO survey_distribution SELECT survey, survey_month, section_no, section, "
+            "horizon, median, p10, p90, n, doc_sha256 FROM _sd ON CONFLICT DO UPDATE SET "
+            "median = excluded.median, p10 = excluded.p10, p90 = excluded.p90, n = excluded.n, "
+            "doc_sha256 = excluded.doc_sha256"
+        )
+    finally:
+        conn.unregister("_sd")
+    return len(d)
+
+
+def read_survey_distribution(conn: duckdb.DuckDBPyConnection, survey: str = "EEE") -> pd.DataFrame:
+    return conn.execute(
+        "SELECT * FROM survey_distribution WHERE survey = ? ORDER BY survey_month, section_no",
+        [survey],
     ).df()
 
 

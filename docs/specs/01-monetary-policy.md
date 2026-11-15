@@ -1,6 +1,14 @@
 # Spec 01 — Monetary Policy tab
 
-Status: **planning** (saved 2026-11-14).
+Status: **implemented, partly pending manual data** (2026-11-14).
+
+## Decisions taken during implementation
+- **bcentral.cl** is bot-protected and robots.txt disallows the RPM section: documents come from manually saved pages/PDFs (`docs/manual-data.md`). 1a/1c are built around that.
+- **Anthropic API dropped** (user decision): no LLM hawk/dove scores, summaries or vote fallback.
+- **SPC > 1y**: semiannual coupons, ACT/360 (user). `holidays` added for the CL calendar.
+- **Meeting dates**: 4 dates sourced from Kalshi/Polymarket market rules (unconfirmed); the rest wait for the BCCh calendar page. Decision history uses TPM changes meanwhile.
+- **EEE next/following meeting + deciles** come from the EEE results PDF (parser built and tested on the Oct-2026 PDF); the BDE only has month-based horizons.
+- **EOF statement-bias series** registered; scale unconfirmed, shown with a caveat.
 
 Implement the **Monetary Policy** tab described in CLAUDE.md. Read CLAUDE.md first and follow its coding practices, storage schema and scraping rules.
 

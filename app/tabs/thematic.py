@@ -11,15 +11,11 @@ SPEC = TabSpec(
     [
         "One card per theme: thesis, key indicators, open questions",
         "Indicator charts from yfinance / FRED / EIA",
-        "Claude-written summaries (optional, needs ANTHROPIC_API_KEY)",
     ],
     [
         SourceRow("Market prices", "yfinance", "Python lib (unofficial)", "none", "Daily"),
         SourceRow("Macro series", "FRED", "REST", "FRED_API_KEY", "Daily / monthly"),
         SourceRow("Oil inventories", "EIA", "REST", "EIA_API_KEY (opt.)", "Weekly"),
-        SourceRow(
-            "Summaries", "Anthropic API", "anthropic SDK", "ANTHROPIC_API_KEY (opt.)", "On demand"
-        ),
     ],
 )
 
