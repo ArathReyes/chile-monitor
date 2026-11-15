@@ -73,22 +73,82 @@ CREATE TABLE IF NOT EXISTS documents (
     sha256       VARCHAR
 );
 -- Provisional: finalize columns in the Bond Monitor spec.
-CREATE TABLE IF NOT EXISTS auctions (
-    auction_id     VARCHAR PRIMARY KEY,
-    auction_date   DATE NOT NULL,
-    issuer         VARCHAR,
-    instrument     VARCHAR,
-    nemotecnico    VARCHAR,
-    currency       VARCHAR,
-    amount_offered DOUBLE,
-    amount_awarded DOUBLE,
-    bids_received  DOUBLE,
-    bid_to_cover   DOUBLE,
-    yield_awarded  DOUBLE,
-    status         VARCHAR,
-    source         VARCHAR,
-    fetched_at     TIMESTAMP,
-    details_json   JSON
+-- Treasury auctions (Hacienda ODP; sources/hacienda.py). Append-only: rows are never deleted.
+CREATE TABLE IF NOT EXISTS auction_calendar (
+    auction_date    DATE NOT NULL,
+    instrument      VARCHAR NOT NULL,   -- as labelled by Hacienda: "BTP-2032", "Letra oct. 2027"
+    instrument_type VARCHAR,            -- Letra | BTP | BTU
+    nemo            VARCHAR,
+    isin            VARCHAR,
+    maturity        DATE,
+    unit            VARCHAR,            -- "MM CLP" | "M UF"
+    amount          DOUBLE,
+    reopening       BOOLEAN,
+    status          VARCHAR,            -- active | removed
+    first_seen      TIMESTAMP,
+    last_seen       TIMESTAMP,
+    PRIMARY KEY (auction_date, instrument)
+);
+CREATE TABLE IF NOT EXISTS auction_calendar_changes (
+    detected_at  TIMESTAMP NOT NULL,
+    auction_date DATE NOT NULL,
+    instrument   VARCHAR NOT NULL,
+    change       VARCHAR NOT NULL,      -- new | amount | removed | reinstated
+    old_amount   DOUBLE,
+    new_amount   DOUBLE
+);
+CREATE TABLE IF NOT EXISTS auction_results (
+    auction_date    DATE NOT NULL,
+    nemo            VARCHAR NOT NULL,
+    bond            VARCHAR,
+    instrument_type VARCHAR,
+    maturity        DATE,
+    unit            VARCHAR,
+    cupo            DOUBLE,
+    demand          DOUBLE,
+    allocated       DOUBLE,
+    banks           DOUBLE,
+    afp_ins_brokers DOUBLE,
+    rate            DOUBLE,
+    bid_to_cover    DOUBLE,
+    status          VARCHAR,            -- ok | desierta (void auction)
+    note            VARCHAR,            -- loader fixes (e.g. typo'd dates in consolidated files)
+    source          VARCHAR NOT NULL,   -- live | consolidated
+    scraped_at      TIMESTAMP NOT NULL,
+    PRIMARY KEY (auction_date, nemo)
+);
+CREATE TABLE IF NOT EXISTS auction_results_revisions (
+    detected_at  TIMESTAMP NOT NULL,
+    auction_date DATE NOT NULL,
+    nemo         VARCHAR NOT NULL,
+    field        VARCHAR NOT NULL,
+    old_value    VARCHAR,
+    new_value    VARCHAR,
+    source       VARCHAR
+);
+CREATE TABLE IF NOT EXISTS bond_master (
+    nemo            VARCHAR PRIMARY KEY,
+    isin            VARCHAR,
+    instrument_type VARCHAR,            -- Letra | BTP | BTU
+    currency        VARCHAR,            -- CLP | UF
+    coupon_pct      DOUBLE,
+    coupon_freq     INTEGER,            -- 2 = semiannual, 0 = zero coupon
+    coupon_months   VARCHAR,            -- e.g. "3,9"
+    issue_date      DATE,
+    maturity_date   DATE,
+    amortization    VARCHAR,            -- bullet
+    day_count       VARCHAR,
+    esg             VARCHAR,
+    source          VARCHAR,            -- stock | characteristics | nemo
+    flagged         VARCHAR,            -- why the row needs review (NULL = clean)
+    updated_at      TIMESTAMP NOT NULL
+);
+CREATE TABLE IF NOT EXISTS bond_outstanding (
+    nemo   VARCHAR NOT NULL,
+    as_of  DATE NOT NULL,
+    amount DOUBLE NOT NULL,
+    unit   VARCHAR NOT NULL,
+    PRIMARY KEY (nemo, as_of)
 );
 CREATE TABLE IF NOT EXISTS survey_distribution (
     survey       VARCHAR NOT NULL,   -- 'EEE'
@@ -165,7 +225,28 @@ CREATE TABLE IF NOT EXISTS ingest_log (
 
 
 # Idempotent migrations for databases created before a column existed.
-MIGRATIONS = ("ALTER TABLE documents ADD COLUMN IF NOT EXISTS meeting_id VARCHAR",)
+MIGRATIONS = (
+    "ALTER TABLE documents ADD COLUMN IF NOT EXISTS meeting_id VARCHAR",
+    "DROP TABLE IF EXISTS auctions",  # provisional placeholder, replaced by auction_* (spec 04)
+    "ALTER TABLE auction_results ADD COLUMN IF NOT EXISTS note VARCHAR",
+)
+
+
+def _migrate_hacienda_log(conn: duckdb.DuckDBPyConnection) -> None:
+    """The standalone hacienda.py wrote to hacienda_ingest_log; fold it into ingest_log."""
+    exists = _first(
+        conn,
+        "SELECT count(*) FROM information_schema.tables WHERE table_name = 'hacienda_ingest_log'",
+    )
+    if exists:
+        conn.execute(
+            """
+            INSERT INTO ingest_log
+            SELECT 'hacienda.' || job, 'hacienda', started_at, started_at, status, rows, message
+            FROM hacienda_ingest_log
+            """
+        )
+        conn.execute("DROP TABLE hacienda_ingest_log")
 
 
 def _first(conn: duckdb.DuckDBPyConnection, sql: str, params: list[Any] | None = None) -> Any:
@@ -197,6 +278,7 @@ def connect(path: Path | str | None = None, read_only: bool = False) -> duckdb.D
         conn.execute(SCHEMA)
         for stmt in MIGRATIONS:
             conn.execute(stmt)
+        _migrate_hacienda_log(conn)
     return conn
 
 
@@ -353,8 +435,18 @@ def read_vintages(conn: duckdb.DuckDBPyConnection, series_id: str) -> pd.DataFra
 
 
 def upsert_document(conn: duckdb.DuckDBPyConnection, **row: Any) -> None:
-    cols = ["doc_id", "kind", "institution", "meeting_id", "published_at", "title", "url",
-            "raw_path", "text", "sha256"]  # fmt: skip
+    cols = [
+        "doc_id",
+        "kind",
+        "institution",
+        "meeting_id",
+        "published_at",
+        "title",
+        "url",
+        "raw_path",
+        "text",
+        "sha256",
+    ]
     conn.execute(
         f"INSERT INTO documents ({', '.join(cols)}) VALUES ({', '.join('?' * len(cols))}) "
         "ON CONFLICT (doc_id) DO UPDATE SET title = excluded.title, url = excluded.url, "
@@ -440,9 +532,20 @@ def replace_release_surprises(conn: duckdb.DuckDBPyConnection, df: pd.DataFrame)
         return 0
     d = df.copy()
     d["computed_at"] = utcnow()
-    cols = ["indicator", "reference_period", "release_date", "consensus", "consensus_source",
-            "consensus_date", "actual", "actual_is_first_print", "surprise", "zscore", "revised",
-            "computed_at"]  # fmt: skip
+    cols = [
+        "indicator",
+        "reference_period",
+        "release_date",
+        "consensus",
+        "consensus_source",
+        "consensus_date",
+        "actual",
+        "actual_is_first_print",
+        "surprise",
+        "zscore",
+        "revised",
+        "computed_at",
+    ]
     conn.register("_rs", d[cols])
     try:
         conn.execute("INSERT INTO release_surprises SELECT * FROM _rs")
@@ -624,3 +727,308 @@ def save_raw(
     path = folder / filename
     path.write_bytes(content)
     return path, hashlib.sha256(content).hexdigest()
+
+
+# ------------------------------------------------------------- Treasury auctions
+
+RESULT_FIELDS = [
+    "bond",
+    "instrument_type",
+    "maturity",
+    "unit",
+    "cupo",
+    "demand",
+    "allocated",
+    "banks",
+    "afp_ins_brokers",
+    "rate",
+    "bid_to_cover",
+    "status",
+    "note",
+]
+LIVE_SOURCES = ("live",)
+
+
+def _same(a: Any, b: Any) -> bool:
+    if isinstance(a, float) or isinstance(b, float):
+        if a is None or b is None:
+            return a is None and b is None
+        return abs(float(a) - float(b)) < 1e-9
+    if isinstance(a, datetime):
+        a = a.date()
+    if isinstance(b, datetime):
+        b = b.date()
+    return a == b
+
+
+def upsert_auction_calendar(
+    conn: duckdb.DuckDBPyConnection, rows: list[dict], today: date, now: datetime | None = None
+) -> list[dict]:
+    """Upsert calendar rows; a future auction that vanished from the scraped window is marked
+    removed. Every change is logged in auction_calendar_changes and returned."""
+    now = now or utcnow()
+    changes: list[dict] = []
+    seen = {(r["auction_date"], r["instrument"]) for r in rows}
+    for r in rows:
+        old = conn.execute(
+            "SELECT amount, status FROM auction_calendar WHERE auction_date = ? AND instrument = ?",
+            [r["auction_date"], r["instrument"]],
+        ).fetchall()
+        if not old:
+            conn.execute(
+                "INSERT INTO auction_calendar VALUES (?,?,?,?,?,?,?,?,?, 'active', ?, ?)",
+                [
+                    r["auction_date"],
+                    r["instrument"],
+                    r["instrument_type"],
+                    r["nemo"],
+                    r["isin"],
+                    r["maturity"],
+                    r["unit"],
+                    r["amount"],
+                    r["reopening"],
+                    now,
+                    now,
+                ],
+            )
+            changes.append({**_chg(r, "new"), "old": None, "new": r["amount"]})
+            continue
+        old_amount, old_status = old[0]
+        if old_amount != r["amount"] or old_status != "active":
+            kind = "amount" if old_status == "active" else "reinstated"
+            changes.append({**_chg(r, kind), "old": old_amount, "new": r["amount"]})
+        conn.execute(
+            """
+            UPDATE auction_calendar SET amount = ?, instrument_type = ?, nemo = COALESCE(?, nemo),
+                isin = COALESCE(?, isin), maturity = COALESCE(?, maturity), unit = ?,
+                reopening = ?, status = 'active', last_seen = ?
+            WHERE auction_date = ? AND instrument = ?
+            """,
+            [
+                r["amount"],
+                r["instrument_type"],
+                r["nemo"],
+                r["isin"],
+                r["maturity"],
+                r["unit"],
+                r["reopening"],
+                now,
+                r["auction_date"],
+                r["instrument"],
+            ],
+        )
+    if rows:
+        lo = min(r["auction_date"] for r in rows)
+        hi = max(r["auction_date"] for r in rows)
+        stale = conn.execute(
+            """
+            SELECT auction_date, instrument, amount FROM auction_calendar
+            WHERE status = 'active' AND auction_date BETWEEN ? AND ? AND auction_date >= ?
+            """,
+            [lo, hi, today],
+        ).fetchall()
+        for d, ins, amt in stale:
+            if (d, ins) not in seen:
+                conn.execute(
+                    "UPDATE auction_calendar SET status = 'removed', last_seen = ? "
+                    "WHERE auction_date = ? AND instrument = ?",
+                    [now, d, ins],
+                )
+                changes.append(
+                    {
+                        "auction_date": d,
+                        "instrument": ins,
+                        "change": "removed",
+                        "old": amt,
+                        "new": None,
+                    }
+                )
+    for c in changes:
+        conn.execute(
+            "INSERT INTO auction_calendar_changes VALUES (?,?,?,?,?,?)",
+            [now, c["auction_date"], c["instrument"], c["change"], c["old"], c["new"]],
+        )
+    return changes
+
+
+def _chg(r: dict, kind: str) -> dict:
+    return {"auction_date": r["auction_date"], "instrument": r["instrument"], "change": kind}
+
+
+def upsert_auction_results(
+    conn: duckdb.DuckDBPyConnection, rows: list[dict], source: str, now: datetime | None = None
+) -> tuple[int, int, int]:
+    """Insert new results; update changed ones and log each changed field as a revision.
+
+    Live-page rows take priority: a consolidated row never overwrites a live one.
+    Returns (new, revised, skipped).
+    """
+    now = now or utcnow()
+    new = revised = skipped = 0
+    cols = ", ".join(RESULT_FIELDS)
+    for r in rows:
+        old = conn.execute(
+            f"SELECT {cols}, source FROM auction_results WHERE auction_date = ? AND nemo = ?",
+            [r["auction_date"], r["nemo"]],
+        ).fetchall()
+        if not old:
+            conn.execute(
+                f"INSERT INTO auction_results (auction_date, nemo, {cols}, source, scraped_at) "
+                f"VALUES (?, ?, {', '.join('?' for _ in RESULT_FIELDS)}, ?, ?)",
+                [r["auction_date"], r["nemo"], *[r.get(f) for f in RESULT_FIELDS], source, now],
+            )
+            new += 1
+            continue
+        *old_vals, old_source = old[0]
+        if old_source in LIVE_SOURCES and source not in LIVE_SOURCES:
+            skipped += 1
+            continue
+        diffs = [
+            (f, o, r.get(f))
+            for f, o in zip(RESULT_FIELDS, old_vals, strict=True)
+            if not _same(o, r.get(f))
+        ]
+        if not diffs and old_source == source:
+            continue
+        if diffs:
+            revised += 1
+            for f, o, n in diffs:
+                conn.execute(
+                    "INSERT INTO auction_results_revisions VALUES (?,?,?,?,?,?,?)",
+                    [now, r["auction_date"], r["nemo"], f, _txt(o), _txt(n), source],
+                )
+        sets = ", ".join(f"{f} = ?" for f in RESULT_FIELDS)
+        conn.execute(
+            f"UPDATE auction_results SET {sets}, source = ?, scraped_at = ? "
+            "WHERE auction_date = ? AND nemo = ?",
+            [*[r.get(f) for f in RESULT_FIELDS], source, now, r["auction_date"], r["nemo"]],
+        )
+    return new, revised, skipped
+
+
+def _txt(v: Any) -> str | None:
+    return None if v is None else str(v)
+
+
+def auction_missing_result_dates(conn: duckdb.DuckDBPyConnection, today: date) -> list[date]:
+    """Active calendar auctions dated on/before today with no stored result."""
+    rows = conn.execute(
+        """
+        SELECT DISTINCT c.auction_date FROM auction_calendar c
+        LEFT JOIN auction_results r ON r.auction_date = c.auction_date
+        WHERE c.status = 'active' AND c.auction_date <= ? AND r.auction_date IS NULL
+        ORDER BY 1
+        """,
+        [today],
+    ).fetchall()
+    return [r[0] if isinstance(r[0], date) else r[0].date() for r in rows]
+
+
+def count_calendar_on(conn: duckdb.DuckDBPyConnection, d: date) -> int:
+    return int(
+        _first(
+            conn,
+            "SELECT count(*) FROM auction_calendar WHERE status = 'active' AND auction_date = ?",
+            [d],
+        )
+    )
+
+
+def count_results_on(conn: duckdb.DuckDBPyConnection, d: date) -> int:
+    return int(_first(conn, "SELECT count(*) FROM auction_results WHERE auction_date = ?", [d]))
+
+
+def read_auction_results(conn: duckdb.DuckDBPyConnection) -> pd.DataFrame:
+    df = conn.execute(
+        """
+        SELECT r.*, (SELECT count(*) FROM auction_results_revisions v
+                     WHERE v.auction_date = r.auction_date AND v.nemo = r.nemo) > 0 AS revised
+        FROM auction_results r ORDER BY auction_date DESC, nemo
+        """
+    ).df()
+    for c in ("auction_date", "maturity"):
+        if c in df.columns:
+            df[c] = pd.to_datetime(df[c])
+    return df
+
+
+def read_auction_calendar(conn: duckdb.DuckDBPyConnection) -> pd.DataFrame:
+    df = conn.execute("SELECT * FROM auction_calendar ORDER BY auction_date, instrument").df()
+    for c in ("auction_date", "maturity"):
+        df[c] = pd.to_datetime(df[c])
+    return df
+
+
+def read_calendar_changes(conn: duckdb.DuckDBPyConnection) -> pd.DataFrame:
+    return conn.execute(
+        "SELECT * FROM auction_calendar_changes ORDER BY detected_at DESC, auction_date"
+    ).df()
+
+
+BOND_MASTER_COLUMNS = [
+    "nemo",
+    "isin",
+    "instrument_type",
+    "currency",
+    "coupon_pct",
+    "coupon_freq",
+    "coupon_months",
+    "issue_date",
+    "maturity_date",
+    "amortization",
+    "day_count",
+    "esg",
+    "source",
+    "flagged",
+]
+
+
+def replace_bond_master(conn: duckdb.DuckDBPyConnection, df: pd.DataFrame) -> int:
+    """Rewrite bond_master (fully derived from the latest Hacienda files)."""
+    d = df[BOND_MASTER_COLUMNS].copy()
+    d["updated_at"] = utcnow()
+    conn.execute("BEGIN")
+    try:
+        conn.execute("DELETE FROM bond_master")
+        conn.register("_bm", d)
+        conn.execute("INSERT INTO bond_master SELECT * FROM _bm")
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise
+    finally:
+        conn.unregister("_bm")
+    return len(d)
+
+
+def upsert_bond_outstanding(conn: duckdb.DuckDBPyConnection, df: pd.DataFrame) -> int:
+    if df.empty:
+        return 0
+    conn.register("_bo", df[["nemo", "as_of", "amount", "unit"]])
+    try:
+        conn.execute(
+            """
+            INSERT INTO bond_outstanding SELECT * FROM _bo
+            ON CONFLICT (nemo, as_of) DO UPDATE SET amount = excluded.amount, unit = excluded.unit
+            """
+        )
+    finally:
+        conn.unregister("_bo")
+    return len(df)
+
+
+def read_bond_master(conn: duckdb.DuckDBPyConnection) -> pd.DataFrame:
+    df = conn.execute("SELECT * FROM bond_master ORDER BY instrument_type, maturity_date").df()
+    for c in ("issue_date", "maturity_date"):
+        df[c] = pd.to_datetime(df[c])
+    return df
+
+
+def read_bond_outstanding(conn: duckdb.DuckDBPyConnection) -> pd.DataFrame:
+    """Latest outstanding amount per bond."""
+    return conn.execute(
+        """
+        SELECT nemo, as_of, amount, unit FROM bond_outstanding
+        QUALIFY row_number() OVER (PARTITION BY nemo ORDER BY as_of DESC) = 1
+        """
+    ).df()

@@ -21,6 +21,7 @@ dependencies = [
     "pyyaml>=6.0",
     "python-dotenv>=1.0",
     "holidays>=0.108",
+    "openpyxl>=3.1.5",
 ]
 
 [dependency-groups]

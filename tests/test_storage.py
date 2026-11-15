@@ -13,7 +13,9 @@ TABLES = {
     "observations_history",
     "market_snapshots",
     "documents",
-    "auctions",
+    "auction_calendar",
+    "auction_results",
+    "bond_master",
     "ingest_log",
 }
 
