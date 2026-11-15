@@ -28,21 +28,23 @@ import pandas as pd
 from monitor.cl_calendar import previous_business_day, spc_start
 from monitor.models.surprises import EEE_PUBLICATION_LAG_DAYS, EOF_MAX_AGE_DAYS
 from monitor.models.tpm_implied import (
+    EOF_KEYS,
+    EOF_MEETING_KEYS,
+    EofRound,
     FitConfig,
+    Meeting,
     Step,
     SwapQuote,
     average_spread_bp,
-    build_prior,
     build_steps,
+    eof_prior,
     fit_path,
+    latest_eof_round,
+    meetings_between,
 )
-
-Meeting = tuple[date, date, str]  # (decision, effective, id)
 
 N_STEPS = 8
 SHORT_SWAPS = (("cl_spc_nom_90d", 90), ("cl_spc_nom_180d", 180), ("cl_spc_nom_360d", 360))
-EOF_MEETING_KEYS = ("next", "rpm1", "rpm2_3m", "rpm3", "rpm4_6m")
-EOF_HORIZON_KEYS = ((365, "12m"), (730, "24m"))
 QUOTE_MAX_AGE_DAYS = 7
 EOF_LAG_DAYS = 1
 DEAD_BAND_BP = 5.0
@@ -62,11 +64,6 @@ class FitInputs(NamedTuple):
     steps: list[Step]
     prior: np.ndarray
     spread_bp: float
-
-
-class EofRound(NamedTuple):
-    survey_date: date
-    values: dict[str, float]
 
 
 # ------------------------------------------------------------------- helpers
@@ -115,55 +112,10 @@ def quotes_as_of(t: date, series: dict[str, pd.Series]) -> list[SwapQuote]:
     return out
 
 
-def latest_eof_round(t: date, series: dict[str, pd.Series]) -> EofRound | None:
+def eof_round_as_of(t: date, series: dict[str, pd.Series]) -> EofRound | None:
     """Latest EOF round usable at t (survey date + EOF_LAG_DAYS <= t); values from it only."""
-    cutoff = t - timedelta(days=EOF_LAG_DAYS)
-    dates = [
-        last[0]
-        for k in EOF_MEETING_KEYS
-        if (last := _last(_get(series, f"eof_tpm_{k}"), cutoff)) is not None
-    ]
-    if not dates:
-        return None
-    sd = max(dates)
-    values = {}
-    for k in [*EOF_MEETING_KEYS, *(k for _, k in EOF_HORIZON_KEYS)]:
-        s = _get(series, f"eof_tpm_{k}").dropna()
-        ts = pd.Timestamp(sd)
-        if ts in s.index:
-            values[k] = float(s.loc[ts])
-    return EofRound(sd, values)
-
-
-def meetings_between(meetings: Sequence[Meeting], after: date, before: date) -> int:
-    """Number of meetings with after < decision < before."""
-    return sum(1 for dec, _, _ in meetings if after < dec < before)
-
-
-def prior_as_of(
-    t: date,
-    series: dict[str, pd.Series],
-    meetings: Sequence[Meeting],
-    steps: list[Step],
-    tpm0: float,
-    align: bool = True,
-) -> np.ndarray:
-    """EOF prior with the app's mapping (meeting keys by position, 12m/24m by days).
-
-    align=True shifts meeting positions by the meetings already held between the survey and t
-    (the EOF 'next' then refers to a past meeting). align=False reproduces app/mp_data exactly.
-    """
-    rnd = latest_eof_round(t, series)
-    if rnd is None:
-        return build_prior(steps, tpm0, None)
-    offset = meetings_between(meetings, rnd.survey_date, steps[0].decision_date) if align else 0
-    pts = {
-        i - offset: rnd.values[k]
-        for i, k in enumerate(EOF_MEETING_KEYS)
-        if k in rnd.values and i >= offset
-    }
-    hz = {d: rnd.values[k] for d, k in EOF_HORIZON_KEYS if k in rnd.values}
-    return build_prior(steps, tpm0, rnd.survey_date, pts, hz)
+    eof = {k: series[f"eof_tpm_{k}"] for k in EOF_KEYS if f"eof_tpm_{k}" in series}
+    return latest_eof_round(eof, t - timedelta(days=EOF_LAG_DAYS))
 
 
 def inputs_as_of(
@@ -179,7 +131,7 @@ def inputs_as_of(
     tpm0 = float(tpm.iloc[-1])
     quotes = quotes_as_of(t, series)
     steps = build_steps(list(meetings), t, N_STEPS)
-    prior = prior_as_of(t, series, meetings, steps, tpm0, align_prior)
+    prior = eof_prior(steps, tpm0, eof_round_as_of(t, series), meetings, align_prior)
     spread = average_spread_bp(_upto(_get(series, "cl_tib"), t), tpm)
     return FitInputs(quotes, tpm0, steps, prior, spread)
 
@@ -201,7 +153,7 @@ def eof_expectation(
     """
     ms = sorted(meetings)
     dec = ms[target][0]
-    rnd = latest_eof_round(t, series)
+    rnd = eof_round_as_of(t, series)
     if rnd is not None and (dec - rnd.survey_date).days <= EOF_MAX_AGE_DAYS:
         k = meetings_between(ms, rnd.survey_date, dec)
         out = []
@@ -278,7 +230,7 @@ def backtest_row(
     row["actual_cum2_bp"] = _bp(after[1], inp.tpm0)
     row["actual_cum3_bp"] = _bp(after[2], inp.tpm0)
     row["actual_m1_vs_tpm0_bp"] = _bp(after[0], inp.tpm0)
-    rnd = latest_eof_round(t, series)
+    rnd = eof_round_as_of(t, series)
     row["eof_round"] = rnd.survey_date if rnd else None
     row["prior_offset"] = (
         meetings_between(ms, rnd.survey_date, inp.steps[0].decision_date) if rnd else 0

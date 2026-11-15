@@ -72,6 +72,27 @@ def test_bcch_parse_get_series(load_fixture):
     assert df["obs_date"].iloc[0] == date(2021, 10, 12)
 
 
+def test_bcch_parse_drops_placeholder_dates(caplog):
+    from monitor.sources.bcch import parse_get_series
+
+    payload = {
+        "Codigo": 0,
+        "Descripcion": "Success",
+        "Series": {
+            "seriesId": "F022.SPC.TIN.D090.NO.Z.D",
+            "Obs": [
+                {"indexDateString": "31-12-1899", "value": "0", "statusCode": "OK"},
+                {"indexDateString": "13-11-2026", "value": "4.32", "statusCode": "OK"},
+            ],
+        },
+    }
+    with caplog.at_level("WARNING", logger="monitor.sources.bcch"):
+        df = parse_get_series(payload)
+    assert df["obs_date"].tolist() == [date(2026, 11, 13)]
+    assert df["value"].tolist() == [4.32]
+    assert "1899-12-31" in caplog.text
+
+
 def test_bcch_parse_error_payload():
     from monitor.sources.bcch import BcchApiError, parse_get_series
 

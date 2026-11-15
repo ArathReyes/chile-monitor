@@ -2,6 +2,24 @@
 
 Generated 2026-11-15 by `scripts/backtest_implied_path.py` from a copy of `data/monitor.duckdb`. Model: `monitor.models.tpm_implied.fit_path`; harness: `monitor.models.backtest`. Per-row results: `01-implied-path.csv`.
 
+## Changes applied (2026-11-15)
+
+- Smoothness default μ 0.25 → 0.05 (λ stays 0.005): `FitConfig`, the app's sliders and `implied_fit` defaults.
+
+- Prior alignment: when meetings were held between the latest EOF round and the curve date, the round's meeting positions now shift by that count (`tpm_implied.eof_prior`, shared by the app and this harness; previously the app mapped the round's 'next' to the first future meeting).
+
+- Single EOF round: the app now takes every EOF key from the latest survey date (`tpm_implied.latest_eof_round`) instead of each series' own latest value.
+
+- The harness already used the aligned, single-round prior, so the metric changes below come from μ; the prior fixes change the live app (see 'Prior alignment').
+
+Meeting-1 change, all regimes (MAE and bias in bp; before = μ 0.25, after = μ 0.05):
+
+| h (bd) | MAE before | MAE after | bias before | bias after | bucket % before | bucket % after |
+|---|---|---|---|---|---|---|
+| 1 | 10.0 | 8.8 | -4.5 | 0.8 | 71.1 | 80.0 |
+| 5 | 11.2 | 9.3 | -6.4 | -0.8 | 73.3 | 77.8 |
+| 20 | 18.1 | 14.7 | -12.1 | -5.2 | 44.2 | 58.1 |
+
 ## Method
 
 - Sample: 45 of 45 confirmed BCCh meetings (2021-05-13 to 2026-10-27, holds included). Steps use true meeting dates (the BCCh publishes its calendar in advance).
@@ -16,13 +34,13 @@ Generated 2026-11-15 by `scripts/backtest_implied_path.py` from a copy of `data/
 
 - SPC 90/180/360d: latest quote dated ≤ as-of (BDE date = trade date, quote = close of that day), tenor skipped if older than 7 days; accrual starts T+2 CL business days (`spc_start`), 360 basis.
 
-- EOF: a round dated d is used from d + 1 day (results are published after the survey closes). The benchmark needs a round within 45 days of the decision. The prior uses all keys from the single latest round (the app takes each series' latest value separately, which can mix rounds).
+- EOF: a round dated d is used from d + 1 day (results are published after the survey closes). The benchmark needs a round within 45 days of the decision. The prior uses all keys from the single latest round (`tpm_implied.latest_eof_round`, same as the app).
 
 - EEE: dated the 1st of the month, used 12 days later.
 
 - TPM, TIB (spread = 20-obs average TIB − TPM): observations dated ≤ as-of.
 
-- Prior mapping as in `app/mp_data.implied_fit` (EOF next, rpm1, rpm2_3m, rpm3, rpm4_6m by meeting position; 12m → 365 days, 24m → 730 days), except meeting positions are shifted by the number of meetings held between the EOF round and the as-of date (see 'Prior alignment' below).
+- Prior mapping = `tpm_implied.eof_prior`, shared with `app/mp_data.implied_fit` (EOF next, rpm1, rpm2_3m, rpm3, rpm4_6m by meeting position; 12m → 365 days, 24m → 730 days); meeting positions shift by the number of meetings held between the EOF round and the first step (see 'Prior alignment' below).
 
 - Direction hit: sign of change with a ±5bp dead band (inside = hold). 25bp bucket hit: implied change rounded to the nearest 25bp equals the realized change.
 
@@ -31,15 +49,15 @@ Generated 2026-11-15 by `scripts/backtest_implied_path.py` from a copy of `data/
 | h (bd) | method | n | mae_bp | rmse_bp | bias_bp | dir hit % | 25bp bucket % |
 |---|---|---|---|---|---|---|---|
 | 1 | EOF survey | 45 | 7.8 | 16.7 | -3.3 | 100.0 | 75.6 |
-| 1 | Implied path | 45 | 10.0 | 13.8 | -4.5 | 77.8 | 71.1 |
+| 1 | Implied path | 45 | 8.8 | 12.2 | 0.8 | 80.0 | 80.0 |
 | 1 | Random walk (0) | 45 | 38.9 | 61.0 | -8.9 | 46.7 | 46.7 |
 | 1 | SPC-90d single step | 45 | 17.8 | 26.6 | -3.1 | 71.1 | 53.3 |
 | 5 | EOF survey | 45 | 10.0 | 19.0 | -6.7 | 95.6 | 68.9 |
-| 5 | Implied path | 45 | 11.2 | 15.3 | -6.4 | 75.6 | 73.3 |
+| 5 | Implied path | 45 | 9.3 | 13.3 | -0.8 | 80.0 | 77.8 |
 | 5 | Random walk (0) | 45 | 38.9 | 61.0 | -8.9 | 46.7 | 46.7 |
 | 5 | SPC-90d single step | 45 | 15.0 | 23.4 | -4.7 | 71.1 | 51.1 |
 | 20 | EOF survey | 41 | 19.5 | 30.7 | -11.0 | 85.4 | 48.8 |
-| 20 | Implied path | 43 | 18.1 | 25.1 | -12.1 | 69.8 | 44.2 |
+| 20 | Implied path | 43 | 14.7 | 21.1 | -5.2 | 81.4 | 58.1 |
 | 20 | Random walk (0) | 45 | 38.9 | 61.0 | -8.9 | 46.7 | 46.7 |
 | 20 | SPC-90d single step | 45 | 18.8 | 27.9 | -8.9 | 68.9 | 46.7 |
 
@@ -52,13 +70,13 @@ SPC-90d single step has no multi-meeting version; random walk = 0.
 | h (bd) | method | n | mae_bp | rmse_bp | bias_bp | dir hit % | 25bp bucket % |
 |---|---|---|---|---|---|---|---|
 | 1 | EOF survey | 44 | 23.3 | 40.4 | -15.3 | 93.2 | 54.5 |
-| 1 | Implied path | 44 | 26.4 | 39.7 | -22.4 | 79.5 | 43.2 |
+| 1 | Implied path | 44 | 22.7 | 34.9 | -17.5 | 77.3 | 50.0 |
 | 1 | Random walk (0) | 44 | 79.5 | 120.3 | -18.2 | 34.1 | 34.1 |
 | 5 | EOF survey | 43 | 33.1 | 53.4 | -23.2 | 90.7 | 41.9 |
-| 5 | Implied path | 44 | 30.1 | 45.9 | -26.1 | 77.3 | 45.5 |
+| 5 | Implied path | 44 | 27.1 | 41.3 | -21.3 | 79.5 | 52.3 |
 | 5 | Random walk (0) | 44 | 79.5 | 120.3 | -18.2 | 34.1 | 34.1 |
 | 20 | EOF survey | 26 | 43.3 | 56.9 | -28.8 | 84.6 | 23.1 |
-| 20 | Implied path | 42 | 42.8 | 63.3 | -36.5 | 66.7 | 42.9 |
+| 20 | Implied path | 42 | 39.5 | 59.4 | -32.9 | 69.0 | 42.9 |
 | 20 | Random walk (0) | 44 | 80.7 | 120.7 | -17.0 | 34.1 | 34.1 |
 
 ### To meeting 3
@@ -66,13 +84,13 @@ SPC-90d single step has no multi-meeting version; random walk = 0.
 | h (bd) | method | n | mae_bp | rmse_bp | bias_bp | dir hit % | 25bp bucket % |
 |---|---|---|---|---|---|---|---|
 | 1 | EOF survey | 43 | 58.4 | 85.3 | -42.7 | 83.7 | 23.3 |
-| 1 | Implied path | 43 | 57.5 | 84.2 | -51.9 | 79.1 | 27.9 |
+| 1 | Implied path | 43 | 57.3 | 82.3 | -52.1 | 76.7 | 32.6 |
 | 1 | Random walk (0) | 43 | 122.1 | 178.2 | -27.9 | 23.3 | 23.3 |
 | 5 | EOF survey | 42 | 62.8 | 95.7 | -47.9 | 85.7 | 26.2 |
-| 5 | Implied path | 43 | 61.5 | 90.6 | -56.2 | 79.1 | 27.9 |
+| 5 | Implied path | 43 | 61.4 | 88.2 | -56.7 | 79.1 | 25.6 |
 | 5 | Random walk (0) | 43 | 122.1 | 178.2 | -27.9 | 23.3 | 23.3 |
 | 20 | EOF survey | 26 | 68.3 | 96.0 | -51.0 | 80.8 | 15.4 |
-| 20 | Implied path | 41 | 72.5 | 106.7 | -65.3 | 75.6 | 22.0 |
+| 20 | Implied path | 41 | 72.7 | 105.8 | -67.2 | 75.6 | 22.0 |
 | 20 | Random walk (0) | 43 | 123.3 | 178.7 | -26.7 | 23.3 | 23.3 |
 
 ## Meeting-1 MAE (bp) by regime
@@ -81,22 +99,22 @@ Hiking 2021-05..2022-10, plateau 2022-11..2023-06, cutting 2023-07..2025-12, 202
 
 | regime | h (bd) | n | EOF survey | Implied path | Random walk (0) | SPC-90d single step |
 |---|---|---|---|---|---|---|
-| hiking | 1 | 13 | 21.2 | 17.8 | 82.7 | 25.1 |
-| hiking | 5 | 13 | 23.1 | 20.2 | 82.7 | 19.8 |
-| hiking | 20 | 12 | 37.5 | 31.2 | 82.7 | 29.3 |
-| plateau | 1 | 5 | 0.0 | 14.1 | 0.0 | 22.7 |
-| plateau | 5 | 5 | 0.0 | 15.2 | 0.0 | 18.5 |
-| plateau | 20 | 5 | 0.0 | 23.8 | 0.0 | 12.9 |
-| cutting | 1 | 20 | 3.8 | 6.5 | 33.8 | 16.6 |
-| cutting | 5 | 20 | 6.2 | 7.2 | 33.8 | 14.8 |
-| cutting | 20 | 19 | 17.1 | 12.7 | 33.8 | 17.3 |
-| 2026 | 1 | 7 | 0.0 | 2.9 | 0.0 | 4.2 |
-| 2026 | 5 | 7 | 3.6 | 2.8 | 0.0 | 3.7 |
-| 2026 | 20 | 7 | 4.2 | 6.2 | 0.0 | 7.7 |
+| hiking | 1 | 13 | 21.2 | 15.5 | 82.7 | 25.1 |
+| hiking | 5 | 13 | 23.1 | 18.1 | 82.7 | 19.8 |
+| hiking | 20 | 12 | 37.5 | 25.6 | 82.7 | 29.3 |
+| plateau | 1 | 5 | 0.0 | 7.1 | 0.0 | 22.7 |
+| plateau | 5 | 5 | 0.0 | 5.1 | 0.0 | 18.5 |
+| plateau | 20 | 5 | 0.0 | 7.1 | 0.0 | 12.9 |
+| cutting | 1 | 20 | 3.8 | 6.9 | 33.8 | 16.6 |
+| cutting | 5 | 20 | 6.2 | 6.8 | 33.8 | 14.8 |
+| cutting | 20 | 19 | 17.1 | 13.0 | 33.8 | 17.3 |
+| 2026 | 1 | 7 | 0.0 | 3.3 | 0.0 | 4.2 |
+| 2026 | 5 | 7 | 3.6 | 2.9 | 0.0 | 3.7 |
+| 2026 | 20 | 7 | 4.2 | 6.0 | 0.0 | 7.7 |
 
 ## λ/μ sensitivity (h = 1 bd)
 
-λ = prior weight, μ = smoothness weight (per bp², swap weight 1). Current defaults λ = 0.005, μ = 0.25.
+λ = prior weight, μ = smoothness weight (per bp², swap weight 1). Current defaults λ = 0.005, μ = 0.05 (μ was 0.25 before 2026-11-15).
 
 The spec grid is μ ∈ {0.05, 0.25, 1}; μ = 0 and 0.01 were added after the spec grid showed MAE falling as μ falls.
 
@@ -144,25 +162,25 @@ The spec grid is μ ∈ {0.05, 0.25, 1}; μ = 0 and 0.01 were added after the sp
 
 | decision_date | as_of | actual_change_bp | model_m1_bp | err_bp | eof_m1_bp | spc90_m1_bp | prior_m1_bp | spread_bp | fit_rmse_bp |
 |---|---|---|---|---|---|---|---|---|---|
-| 2022-09-06 | 2022-09-05 | 100.0 | 60.9 | -39.1 | 75.0 | 96.9 | 75.0 | 0.0 | 14.4 |
-| 2022-05-05 | 2022-05-04 | 125.0 | 87.8 | -37.2 | 100.0 | 145.2 | 100.0 | -0.9 | 13.2 |
-| 2023-06-19 | 2023-06-16 | 0.0 | -27.8 | -27.8 | 0.0 | -51.5 | 0.0 | 0.0 | 24.6 |
-| 2021-08-31 | 2021-08-30 | 75.0 | 47.8 | -27.2 | 25.0 | 68.7 | 25.0 | 0.0 | 7.9 |
-| 2022-01-26 | 2022-01-25 | 150.0 | 125.9 | -24.1 | 125.0 | 160.1 | 125.0 | 0.0 | 12.3 |
-| 2022-07-13 | 2022-07-12 | 75.0 | 96.9 | 21.9 | 50.0 | 130.9 | 50.0 | 0.0 | 14.9 |
-| 2023-01-26 | 2023-01-25 | 0.0 | -20.3 | -20.3 | 0.0 | -18.1 | 0.0 | 0.0 | 22.7 |
-| 2023-09-05 | 2023-09-04 | -75.0 | -91.6 | -16.6 | -75.0 | -121.0 | -75.0 | -0.0 | 17.0 |
+| 2022-07-13 | 2022-07-12 | 75.0 | 112.3 | 37.3 | 50.0 | 130.9 | 50.0 | 0.0 | 3.7 |
+| 2021-08-31 | 2021-08-30 | 75.0 | 45.6 | -29.4 | 25.0 | 68.7 | 25.0 | 0.0 | 3.0 |
+| 2022-03-29 | 2022-03-28 | 150.0 | 178.5 | 28.5 | 200.0 | 254.0 | 200.0 | 0.0 | 5.1 |
+| 2022-09-06 | 2022-09-05 | 100.0 | 73.0 | -27.0 | 75.0 | 96.9 | 75.0 | 0.0 | 4.6 |
+| 2022-05-05 | 2022-05-04 | 125.0 | 103.1 | -21.9 | 100.0 | 145.2 | 100.0 | -0.9 | 4.1 |
+| 2023-07-28 | 2023-07-27 | -100.0 | -80.8 | 19.2 | -75.0 | -136.2 | -75.0 | 0.0 | 7.4 |
+| 2021-07-14 | 2021-07-13 | 25.0 | 39.6 | 14.6 | 25.0 | 40.9 | 25.0 | -15.6 | 2.9 |
+| 2022-01-26 | 2022-01-25 | 150.0 | 136.6 | -13.4 | 125.0 | 160.1 | 125.0 | 0.0 | 3.0 |
 
 ## Prior alignment
 
-Rows where the latest EOF round predates a meeting already held by the as-of date (27 rows). The app's mapping assigns the round's 'next' to the first future step, i.e. one meeting too late.
+Rows where the latest EOF round predates a meeting already held by the as-of date (27 rows). The old app mapping (before 2026-11-15) assigned the round's 'next' to the first future step, i.e. one meeting too late; app and backtest now share the aligned mapping (`tpm_implied.eof_prior`).
 
 | prior | target | n | mae_bp | rmse_bp |
 |---|---|---|---|---|
-| aligned prior (backtest) | m1 | 27 | 19.7 | 27.8 |
-| aligned prior (backtest) | cum3 | 26 | 75.0 | 112.9 |
-| app mapping (unaligned) | m1 | 27 | 19.9 | 27.9 |
-| app mapping (unaligned) | cum3 | 26 | 75.0 | 112.9 |
+| aligned prior (current) | m1 | 27 | 16.0 | 23.9 |
+| aligned prior (current) | cum3 | 26 | 75.1 | 111.8 |
+| old app mapping (unaligned) | m1 | 27 | 16.2 | 24.1 |
+| old app mapping (unaligned) | cum3 | 26 | 75.2 | 111.8 |
 
 ## Skipped rows
 
@@ -172,6 +190,9 @@ Rows where the latest EOF round predates a meeting already held by the as-of dat
 | RPM-2024-06 | 2024-06-18 | 20 | 2024-05-20 | target is not steps[0] (2024-05-23) |
 
 ## Conclusions
+
+Written from the first run (μ = 0.25); the recommendation at the end has been applied (see
+'Changes applied' at the top). Tables above are from the current defaults.
 
 1. **Meeting 1, short horizons.** At h = 1-5 bd the implied path cuts the random-walk error by
    ~75% and beats the SPC-90d single-step approximation clearly (MAE ~10 vs ~15-18bp), which
@@ -191,9 +212,9 @@ Rows where the latest EOF round predates a meeting already held by the as-of dat
 5. **Cumulative to meetings 2-3** is hard for everyone (MAE ~57-62bp at h = 1, n = 43); the model
    is on par with the EOF and far better than a random walk. λ barely matters (3 swaps pin the
    first meetings; λ mainly shapes the tail).
-6. **Prior alignment bug** (app maps EOF 'next' to the first future step even when that meeting
-   has been held since the round): affects ~20% of backtest rows but changes MAE by < 0.2bp
-   at λ = 0.005, so it is cosmetic for now; it matters if λ is raised.
+6. **Prior alignment bug** (the app mapped EOF 'next' to the first future step even when that
+   meeting had been held since the round; fixed 2026-11-15): affects ~20% of backtest rows but
+   changes MAE by < 0.2bp at λ = 0.005, so it was cosmetic; it matters if λ is raised.
 
 **Recommendation:** μ = 0.05 (from 0.25), keep λ = 0.005 (0.02 is equivalent within noise).
 Meeting-1 MAE falls from 10.0 / 11.2 / 18.1bp to 8.8 / 9.3 / 14.7bp at h = 1 / 5 / 20, bias
