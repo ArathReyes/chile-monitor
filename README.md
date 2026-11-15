@@ -62,26 +62,40 @@ CRON_TZ=America/New_York
 0  7 * * 1    cd /path/to/chile-monitor && ~/.local/bin/uv run python -m monitor.jobs.bond_master_weekly >> data/logs/bond-master-weekly.log 2>&1
 ```
 
-**GitHub Actions (example, not active):** the jobs need the DuckDB file between runs, so a hosted
-runner must restore and save `data/monitor.duckdb` (e.g. as an artifact or in object storage)
-around each run. GitHub cron is UTC (07:30 New York = 12:30 UTC in winter, 11:30 in summer).
+The four launchd agents are **frozen** (disabled) since the morning job below replaced them.
 
-```yaml
-name: auctions-daily
-on:
-  schedule: [{cron: "30 12 * * 1-5"}]
-  workflow_dispatch: {}
-jobs:
-  run:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - run: uv sync
-      # restore data/monitor.duckdb here
-      - run: uv run python -m monitor.jobs.auctions_daily
-      # save data/monitor.duckdb here
+## Deployment: morning job + hosted app
+
 ```
+GitHub Actions (Mon–Fri 05:05 NY)                       Streamlit Community Cloud
+  pull monitor.duckdb.gz  ◄── Release "data" ──►  app downloads it on start
+  run every source (BDE, INE, Kalshi/Polymarket,     (checks for a newer one every 15 min)
+  curves, Hacienda; Mondays bond master)             and runs this code live
+  push monitor.duckdb.gz  ───►
+  email the report (AgentMail)
+```
+
+- **Workflow:** `.github/workflows/morning.yml` runs `monitor.jobs.morning_all --pull --publish
+  --email --at-ny-hour 5`. GitHub cron is UTC without DST, so it fires at 09:05 and 10:05 UTC
+  and the job keeps only the one that is 05:xx in New York; a second run the same NY day is
+  skipped. Run it now: Actions → morning → Run workflow (forced).
+- **Every step runs even if an earlier one fails.** The email lists OK/WARN/FAIL per step, the
+  errors, the publish result, "data as of" for key series, and the log (tail inline, full log
+  attached). If the published database can't be downloaded, nothing is published and the email
+  says so (never overwrites good data with an empty file).
+- **The database lives in a GitHub Release asset** (`data` tag, `monitor.duckdb.gz`), not in
+  git. `uv run python -m monitor.release status|pull|push` by hand.
+- **Not in the cloud:** BCCh web documents (saved by hand; bcentral.cl is bot-protected). After
+  saving new ones on the Mac: `uv run python -m monitor.release pull`, then
+  `uv run python -m monitor.jobs.mp_daily`, then `uv run python -m monitor.release push`.
+- **Secrets:** repo secrets `BCCH_API_TOKEN`, `AGENTMAIL_API_KEY`; repo variables
+  `AGENTMAIL_INBOX`, `REPORT_TO`. The workflow's own `GITHUB_TOKEN` uploads the asset.
+- **Hosted app** (share.streamlit.io → New app → this repo, `app/main.py`, Python 3.12;
+  dependencies from `requirements.txt`, regenerate with
+  `uv export --no-hashes --no-dev --no-emit-project --format requirements-txt`). Secrets:
+  `AUTO_PULL_DB = "1"`, `DATA_REPO = "owner/name"`, `GITHUB_TOKEN` (fine-grained, read-only
+  Contents on this repo), `BCCH_API_TOKEN` (for the Refresh buttons). Refreshes made in the
+  hosted app last until it restarts or the next morning file arrives.
 
 ## Checks
 

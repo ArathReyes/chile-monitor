@@ -1048,3 +1048,34 @@ def read_bond_outstanding(conn: duckdb.DuckDBPyConnection) -> pd.DataFrame:
         QUALIFY row_number() OVER (PARTITION BY nemo ORDER BY as_of DESC) = 1
         """
     ).df()
+
+
+# ------------------------------------------------------------------ morning job / deployment
+
+
+def last_job_success(conn: duckdb.DuckDBPyConnection, job: str) -> datetime | None:
+    """Latest started_at (UTC, naive) of a successful run of `job`, or None."""
+    return _first(
+        conn, "SELECT max(started_at) FROM ingest_log WHERE job = ? AND status = 'ok'", [job]
+    )
+
+
+def errors_since(conn: duckdb.DuckDBPyConnection, since: datetime) -> pd.DataFrame:
+    return conn.execute(
+        "SELECT job, source, error FROM ingest_log WHERE status = 'error' AND started_at >= ? "
+        "ORDER BY started_at",
+        [since],
+    ).df()
+
+
+def latest_snapshot_ts(conn: duckdb.DuckDBPyConnection, source: str) -> datetime | None:
+    return _first(conn, "SELECT max(snapshot_ts) FROM market_snapshots WHERE source = ?", [source])
+
+
+def latest_auction_result_date(conn: duckdb.DuckDBPyConnection) -> date | None:
+    return _first(conn, "SELECT max(auction_date) FROM auction_results WHERE status = 'ok'")
+
+
+def checkpoint(conn: duckdb.DuckDBPyConnection) -> None:
+    """Flush the WAL into the database file (before copying/uploading it)."""
+    conn.execute("CHECKPOINT")

@@ -17,7 +17,7 @@ A personal web dashboard for an EM macro rates trader in NYC focused on Chile. I
 - **holidays** (country CL, categories public + bank) for the Chilean business-day calendar (`src/monitor/cl_calendar.py`).
 - **pytest** + **ruff** for quality.
 - **No paid APIs.** The Anthropic API is not used (decision 2026-11-14): no LLM scoring or summaries.
-- Scheduling: GitHub Actions cron (later) or local `uv run python -m monitor.jobs.<job>`.
+- Scheduling: **GitHub Actions** `.github/workflows/morning.yml` → `monitor.jobs.morning_all` (Mon–Fri 05:05 NY: every source, publish the DB as Release asset `data/monitor.duckdb.gz` via `monitor.release`, email report via AgentMail `monitor.notify`). The hosted Streamlit app pulls that file (`app/bootstrap.py`, only when `AUTO_PULL_DB=1`). The launchd agents are frozen. Local runs: `uv run python -m monitor.jobs.<job>`.
 
 ## Architecture
 ```

@@ -6,6 +6,7 @@ import streamlit as st
 
 st.set_page_config(page_title="Chile Monitor", page_icon="🇨🇱", layout="wide")
 
+import bootstrap  # noqa: E402
 import style  # noqa: E402
 from tabs import (  # noqa: E402  (set_page_config must run first)
     bond_monitor,
@@ -35,8 +36,11 @@ TABS = [
 
 
 def main() -> None:
+    bootstrap.ensure_db()
     style.apply()
     style.header()
+    if at := bootstrap.published_at():
+        st.caption(f"Data published by the morning job {at}; Refresh buttons fetch newer data.")
     for tab, (_, module) in zip(st.tabs([t[0] for t in TABS]), TABS, strict=True):
         with tab:
             module.render()
