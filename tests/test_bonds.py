@@ -72,6 +72,7 @@ def test_concession_sign():
 def test_allocation_shares_treat_dash_as_zero():
     assert B.allocation_shares(500, None, 500) == (0.0, 100.0)
     assert B.allocation_shares(None, 1, 1) == (None, None)
+    assert B.allocation_shares(500.0, float("nan"), 500.0) == (0.0, 100.0)  # NaN from DuckDB
 
 
 def test_curve_yield_proxy():

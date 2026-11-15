@@ -1,32 +1,21 @@
-"""Bond Monitor tab (placeholder, pinned for later)."""
+"""Bond Monitor tab: five sub-tabs (spec 04)."""
 
-from components import SourceRow, TabSpec, placeholder_card
+from __future__ import annotations
 
-SPEC = TabSpec(
-    "Bond Monitor",
-    "Chilean Treasury supply: auction calendar, results and DV01 going to market each week.",
-    [
-        "Hacienda auction calendar, auto-scraped (bond, date, size)",
-        "Auction results: bid-to-cover, allocation to banks / AFPs / others",
-        "DV01 per auction from the bond master (coupon, maturity from the nemotécnico) "
-        "and BDE yields",
-        "Weekly DV01 supply",
-    ],
-    [
-        SourceRow(
-            "Auction calendar & results",
-            "Hacienda ODP",
-            "scraping",
-            "none",
-            "Per calendar update / per auction",
-        ),
-        SourceRow(
-            "Auction results", "BCCh Informativo Diario", "PDF (pdfplumber)", "none", "Daily, T-1"
-        ),
-        SourceRow("Secondary yields", "BCCh BDE API", "REST", "BCCH_API_TOKEN", "Daily, T-1"),
-    ],
-)
+import streamlit as st
+
+from tabs import bm_impact, bm_master, bm_results, bm_supply, bm_upcoming
+
+SUBTABS = [
+    ("Upcoming Auctions", bm_upcoming),
+    ("Auction Results", bm_results),
+    ("Supply & Issuance", bm_supply),
+    ("Bond Master", bm_master),
+    ("Auction Impact", bm_impact),
+]
 
 
 def render() -> None:
-    placeholder_card(SPEC, key="bond_monitor")
+    for tab, (_, module) in zip(st.tabs([t[0] for t in SUBTABS]), SUBTABS, strict=True):
+        with tab:
+            module.render()

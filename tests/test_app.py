@@ -46,6 +46,11 @@ TAB_LABELS = [
     "Carry & Rolldown",
     "Chile vs World",
     "Data Quality",
+    "Upcoming Auctions",
+    "Auction Results",
+    "Supply & Issuance",
+    "Bond Master",
+    "Auction Impact",
 ]
 
 
@@ -155,7 +160,33 @@ def _fill(db: Path) -> None:
 
     storage.replace_release_surprises(conn, compute_surprises(conn))
     _fill_curves(conn)
+    _fill_auctions(conn)
     conn.close()
+
+
+def _fill_auctions(conn) -> None:
+    """Hacienda tables from the saved real pages and files (no network)."""
+    from datetime import date
+
+    from monitor.sources import hacienda as h
+
+    fx = FIXTURES / "hacienda"
+    h.store_calendar(conn, h.parse_calendar((fx / "calendar_2026-11-15.html").read_text()))
+    h.store_results(conn, h.parse_results((fx / "results_2026-11-15.html").read_text()), "live")
+    rows = h.load_consolidated((fx / "licitaciones_2026.xlsx").read_bytes(), 2026)
+    storage.upsert_auction_results(conn, [r.record() for r in rows], "consolidated")
+    stock, out = h.load_stock((fx / "stock_total_2026-11-15.xlsx").read_bytes(), date(2026, 11, 15))
+    chars = h.parse_characteristics((fx / "caracteristicas_2026-11-15.html").read_text())
+    storage.replace_bond_master(conn, h.build_master(stock, chars, []))
+    storage.upsert_bond_outstanding(conn, out)
+    soma = pd.DataFrame(
+        {
+            "series_id": ["hacienda_auth_usd_2026", "hacienda_placed_usd_2026"],
+            "obs_date": [date(2026, 11, 15)] * 2,
+            "value": [23600.0, 21563.0],
+        }
+    )
+    storage.upsert_observations(conn, soma, "fixture")
 
 
 def _fill_curves(conn) -> None:

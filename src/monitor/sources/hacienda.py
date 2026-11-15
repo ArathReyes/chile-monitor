@@ -579,6 +579,9 @@ def load_consolidated(content: bytes, file_year: int | None = None) -> list[Auct
             r.iloc[cols["afp_ins_brokers"]] if "afp_ins_brokers" in cols else None
         )
         void = any(norm(v) == "desierta" for v in vals.values() if isinstance(v, str))
+        if not void and parse_number(vals["demand"]) == 0 and not parse_number(vals["allocated"]):
+            void = True  # no bids: the file writes zeros (rate 0 is not a clearing rate)
+            note = "; ".join(x for x in (note, "no bids (zeros in file)") if x)
         num = {k: (None if void and k != "cupo" else parse_number(v)) for k, v in vals.items()}
         cupo, demand = num["cupo"], num["demand"]
         out.append(

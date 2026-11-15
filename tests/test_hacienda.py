@@ -217,7 +217,7 @@ def test_consolidated_loader_and_fixes():
     assert len(rows) == 214
     assert {r.auction_date.year for r in rows} == {2026}
     void = [r for r in rows if r.status == "desierta"]
-    assert len(void) == 6 and all(r.allocated is None and r.cupo for r in void)
+    assert len(void) == 10 and all(r.allocated is None and r.cupo for r in void)  # 6 + 4 no-bid
     first = next(r for r in rows if r.nemo == "BTP0001126")
     assert first.bid_to_cover == pytest.approx(1323000 / 350000, abs=1e-3)
     # wrong-century maturities (2031 stored as 1931) are corrected
@@ -297,3 +297,10 @@ def test_storage_master_roundtrip(con):
     storage.upsert_bond_outstanding(con, out)
     storage.upsert_bond_outstanding(con, out)  # idempotent
     assert len(storage.read_bond_outstanding(con)) == len(out)
+
+
+def test_zero_bid_rows_are_void():
+    rows = h.load_consolidated((FIX / "licitaciones_2026.xlsx").read_bytes(), 2026)
+    zero = [r for r in rows if r.auction_date == date(2026, 11, 3) and r.nemo == "BTU0230731"][0]
+    assert zero.status == "desierta" and zero.rate is None and "no bids" in zero.note
+    assert zero.cupo == 1100

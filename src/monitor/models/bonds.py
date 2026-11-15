@@ -132,9 +132,10 @@ def weekly_supply(cal: pd.DataFrame, value_col: str = "amount_usd") -> pd.DataFr
 
 def allocation_shares(allocated: float | None, banks: float | None, others: float | None):
     """(% banks, % AFP/insurers/brokers). Hacienda writes '-' for zero allocation."""
-    if not allocated:
+    if allocated is None or pd.isna(allocated) or allocated == 0:
         return None, None
-    b, o = banks or 0.0, others or 0.0
+    b = 0.0 if banks is None or pd.isna(banks) else float(banks)
+    o = 0.0 if others is None or pd.isna(others) else float(others)
     return 100 * b / allocated, 100 * o / allocated
 
 
