@@ -1,0 +1,222 @@
+{
+ "Codigo": 0,
+ "Descripcion": "Success",
+ "Series": {
+  "descripEsp": "Tasa de interés mercado secundario de los bonos licitados por el BCCh (BCP) a 2 años",
+  "descripIng": "2-year interest rate secondary market, bonds, in pesos (BCP)",
+  "seriesId": "F022.BCLP.TIS.AN02.NO.Z.D",
+  "Obs": [
+   {
+    "indexDateString": "01-10-2026",
+    "value": "5.25",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "02-10-2026",
+    "value": "5.15",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "03-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "04-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "05-10-2026",
+    "value": "5.1",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "06-10-2026",
+    "value": "5.06",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "07-10-2026",
+    "value": "5.07",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "08-10-2026",
+    "value": "5.04",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "09-10-2026",
+    "value": "5.1",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "10-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "11-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "12-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "13-10-2026",
+    "value": "5.02",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "14-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "15-10-2026",
+    "value": "4.95",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "16-10-2026",
+    "value": "5.01",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "17-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "18-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "19-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "20-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "21-10-2026",
+    "value": "5.1",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "22-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "23-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "24-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "25-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "26-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "27-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "28-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "29-10-2026",
+    "value": "5.1",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "30-10-2026",
+    "value": "5.11",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "31-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "01-11-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "02-11-2026",
+    "value": "5.06",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "03-11-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "04-11-2026",
+    "value": "5.12",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "05-11-2026",
+    "value": "5.13",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "06-11-2026",
+    "value": "5.05",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "07-11-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "08-11-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "09-11-2026",
+    "value": "5.06",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "10-11-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "11-11-2026",
+    "value": "5.1",
+    "statusCode": "OK"
+   }
+  ]
+ },
+ "SeriesInfos": []
+}

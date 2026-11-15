@@ -30,6 +30,12 @@ class SeriesSpec(BaseModel):
     transform: str = "level"
     verified: bool = False
     notes: str | None = None
+    # Curves & Rates (spec 03): curve key, tenor in years, and the day-count basis of the quote.
+    curve: str | None = None
+    tenor_years: float | None = None
+    basis: int | None = None  # 360 or 365; curves are harmonized to 365 (models.curves)
+    derived: bool = False  # computed from other series (source "derived"), never fetched
+    model: bool = False  # derived from a fitted curve rather than observed points
 
     @property
     def is_placeholder(self) -> bool:

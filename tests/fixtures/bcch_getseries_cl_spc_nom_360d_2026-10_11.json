@@ -1,0 +1,232 @@
+{
+ "Codigo": 0,
+ "Descripcion": "Success",
+ "Series": {
+  "descripEsp": " Swap promedio de camara, nominal. 360 días",
+  "descripIng": " Swap promedio de camara, nominal. 360 días",
+  "seriesId": "F022.SPC.TPR.D360.NO.Z.D",
+  "Obs": [
+   {
+    "indexDateString": "01-10-2026",
+    "value": "4.72205962615657",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "02-10-2026",
+    "value": "4.71728948758443",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "03-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "04-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "05-10-2026",
+    "value": "4.72205962615657",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "06-10-2026",
+    "value": "4.70297771046102",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "07-10-2026",
+    "value": "4.76021256918546",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "08-10-2026",
+    "value": "4.76974853754442",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "09-10-2026",
+    "value": "4.77928359928459",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "10-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "11-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "12-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "13-10-2026",
+    "value": "4.77928359928459",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "14-10-2026",
+    "value": "4.81741478355868",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "15-10-2026",
+    "value": "4.77451618172786",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "16-10-2026",
+    "value": "4.78405079023059",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "17-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "18-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "19-10-2026",
+    "value": "4.80788334655102",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "20-10-2026",
+    "value": "4.80788334655102",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "21-10-2026",
+    "value": "4.78405079023059",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "22-10-2026",
+    "value": "4.71728948758443",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "23-10-2026",
+    "value": "4.74590691637111",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "24-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "25-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "26-10-2026",
+    "value": "4.76498066670228",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "27-10-2026",
+    "value": "4.76498066670228",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "28-10-2026",
+    "value": "4.86029504390917",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "29-10-2026",
+    "value": "4.8555314758012",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "30-10-2026",
+    "value": "4.86505838577411",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "31-10-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "01-11-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "02-11-2026",
+    "value": "4.83647494049944",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "03-11-2026",
+    "value": "4.81264917828828",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "04-11-2026",
+    "value": "4.85076768142623",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "05-11-2026",
+    "value": "4.83171024084061",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "06-11-2026",
+    "value": "4.81741478355868",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "07-11-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "08-11-2026",
+    "value": "NaN",
+    "statusCode": "ND"
+   },
+   {
+    "indexDateString": "09-11-2026",
+    "value": "4.77451618172786",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "10-11-2026",
+    "value": "4.82694531481886",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "11-11-2026",
+    "value": "4.86505838577411",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "12-11-2026",
+    "value": "4.87934705411863",
+    "statusCode": "OK"
+   },
+   {
+    "indexDateString": "13-11-2026",
+    "value": "4.86982150142001",
+    "statusCode": "OK"
+   }
+  ]
+ },
+ "SeriesInfos": []
+}

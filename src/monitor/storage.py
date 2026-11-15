@@ -128,6 +128,30 @@ CREATE TABLE IF NOT EXISTS release_surprises (
     computed_at      TIMESTAMP NOT NULL,
     PRIMARY KEY (indicator, reference_period)
 );
+-- Per-bond quotes (by nemotécnico) for the Bond Monitor. Empty: no free, public, daily per-bond
+-- source was found (spec 03, Phase 0); a feed can be added later without schema changes.
+CREATE TABLE IF NOT EXISTS bond_quotes (
+    nemo       VARCHAR NOT NULL,
+    obs_date   DATE NOT NULL,
+    yield      DOUBLE,
+    price      DOUBLE,
+    volume     DOUBLE,
+    source     VARCHAR NOT NULL,
+    fetched_at TIMESTAMP NOT NULL,
+    PRIMARY KEY (nemo, obs_date, source)
+);
+-- Daily Nelson-Siegel-Svensson fits per curve (models.curves.fit_nss). Skipped days are stored
+-- with params_json NULL and the reason in `note`.
+CREATE TABLE IF NOT EXISTS curve_fits (
+    curve       VARCHAR NOT NULL,
+    obs_date    DATE NOT NULL,
+    params_json VARCHAR,
+    rmse        DOUBLE,
+    n_points    INTEGER NOT NULL,
+    note        VARCHAR,
+    computed_at TIMESTAMP NOT NULL,
+    PRIMARY KEY (curve, obs_date)
+);
 CREATE TABLE IF NOT EXISTS ingest_log (
     job         VARCHAR NOT NULL,
     source      VARCHAR NOT NULL,
@@ -429,6 +453,59 @@ def replace_release_surprises(conn: duckdb.DuckDBPyConnection, df: pd.DataFrame)
 
 def read_release_surprises(conn: duckdb.DuckDBPyConnection) -> pd.DataFrame:
     return conn.execute("SELECT * FROM release_surprises ORDER BY reference_period").df()
+
+
+# ----------------------------------------------------------------- curve fits
+
+CURVE_FIT_COLUMNS = ["curve", "obs_date", "params_json", "rmse", "n_points", "note"]
+
+
+def upsert_curve_fits(conn: duckdb.DuckDBPyConnection, df: pd.DataFrame) -> int:
+    """Upsert rows ``[curve, obs_date, params_json, rmse, n_points, note]``."""
+    if df.empty:
+        return 0
+    d = df[CURVE_FIT_COLUMNS].copy()
+    d["obs_date"] = pd.to_datetime(d["obs_date"]).dt.date
+    d["computed_at"] = utcnow()
+    conn.register("_cf", d)
+    try:
+        conn.execute(
+            """
+            INSERT INTO curve_fits SELECT * FROM _cf
+            ON CONFLICT (curve, obs_date) DO UPDATE SET
+                params_json = excluded.params_json, rmse = excluded.rmse,
+                n_points = excluded.n_points, note = excluded.note,
+                computed_at = excluded.computed_at
+            """
+        )
+    finally:
+        conn.unregister("_cf")
+    return len(d)
+
+
+def read_curve_fits(
+    conn: duckdb.DuckDBPyConnection, curve: str | None = None, start: date | None = None
+) -> pd.DataFrame:
+    query, params = "SELECT * FROM curve_fits WHERE 1=1", []
+    if curve is not None:
+        query += " AND curve = ?"
+        params.append(curve)
+    if start is not None:
+        query += " AND obs_date >= ?"
+        params.append(start)
+    df = conn.execute(query + " ORDER BY curve, obs_date", params).df()
+    if not df.empty:
+        df["obs_date"] = pd.to_datetime(df["obs_date"])
+    return df
+
+
+def last_curve_fit_date(conn: duckdb.DuckDBPyConnection, curve: str) -> date | None:
+    d = _first(conn, "SELECT max(obs_date) FROM curve_fits WHERE curve = ?", [curve])
+    return d.date() if isinstance(d, datetime) else d
+
+
+def read_bond_quotes(conn: duckdb.DuckDBPyConnection) -> pd.DataFrame:
+    return conn.execute("SELECT * FROM bond_quotes ORDER BY obs_date, nemo").df()
 
 
 # ------------------------------------------------------------------ snapshots

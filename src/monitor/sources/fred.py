@@ -1,4 +1,8 @@
-"""FRED API (St. Louis Fed). Docs: https://fred.stlouisfed.org/docs/api/fred/"""
+"""FRED API (St. Louis Fed). Docs: https://fred.stlouisfed.org/docs/api/fred/
+
+PENDING: FRED is skipped for now (user decision 2026-11-15). Curves & Rates "Chile vs World" needs
+UST DGS1/2/5/10/20/30; register them in config/series.yaml and implement `fetch` when enabled.
+"""
 
 from __future__ import annotations
 
