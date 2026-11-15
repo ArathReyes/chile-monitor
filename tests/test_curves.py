@@ -3,6 +3,7 @@ from datetime import date
 from pathlib import Path
 from types import SimpleNamespace
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -165,3 +166,155 @@ def test_curve_tables():
         assert storage.read_curve_fits(c, "real_bond")["note"].iloc[0] == "3 points < 4"
     finally:
         c.close()
+
+
+# ================================================================ Phase 2 models
+
+TRUE = {"b0": 5.0, "b1": -1.0, "b2": 1.5, "b3": -0.8, "tau1": 1.5, "tau2": 8.0}
+GRID = [0.25, 0.5, 1, 2, 3, 4, 5, 7, 10, 15, 20, 30]
+
+
+def test_nss_recovers_known_parameters():
+    y = curves.nss_yield(np.array(GRID, dtype=float), TRUE)
+    fit = curves.fit_nss(GRID, y)
+    assert fit.ok and fit.quality == "good"
+    assert fit.rmse_bp < 0.1
+    for k in ("b0", "b1", "tau1", "tau2"):
+        assert fit.params[k] == pytest.approx(TRUE[k], rel=0.05, abs=0.05)
+    dense = np.linspace(0.25, 30, 60)
+    assert np.abs(curves.nss_yield(dense, fit.params) - curves.nss_yield(dense, TRUE)).max() < 0.005
+
+
+def test_nss_skips_with_reason_and_uses_previous_fit():
+    fit = curves.fit_nss([2, 5, 10], [5.1, 5.6, 6.0])
+    assert not fit.ok and fit.note == "3 points < 4" and fit.quality == "skipped"
+    y = curves.nss_yield(np.array(GRID, dtype=float), TRUE)
+    warm = curves.fit_nss(GRID, y, prev=TRUE)
+    assert warm.rmse_bp < 0.1
+
+
+def test_fit_history_rows():
+    idx = pd.to_datetime(["2026-11-12", "2026-11-13"])
+    y = curves.nss_yield(np.array([1, 2, 3, 5, 10], dtype=float), TRUE)
+    panel = pd.DataFrame(
+        [y, [y[0], np.nan, np.nan, y[3], y[4]]], index=idx, columns=[1.0, 2.0, 3.0, 5.0, 10.0]
+    )
+    h = curves.fit_history(panel, "nom_swap")
+    assert list(h.columns) == storage.CURVE_FIT_COLUMNS
+    assert h["n_points"].tolist() == [5, 3]
+    assert isinstance(h["params_json"].iloc[0], str) and pd.isna(h["params_json"].iloc[1])
+
+
+def test_forwards():
+    assert curves.forward_rate(5.0, 1, 5.0, 2) == pytest.approx(5.0)
+    # (1.06^2 / 1.05) - 1
+    assert curves.forward_rate(5.0, 1, 6.0, 2) == pytest.approx((1.06**2 / 1.05 - 1) * 100)
+    flat = {"b0": 4.0, "b1": 0.0, "b2": 0.0, "b3": 0.0, "tau1": 1.0, "tau2": 5.0}
+    assert curves.nss_forward(flat, 5, 10) == pytest.approx(4.0)
+    today = pd.DataFrame({"tenor": [2.0, 5.0, 10.0], "value": [5.0, 5.5, 6.0]})
+    assert curves.observed_forward(today, 1.0, 2.0) is None
+    assert curves.observed_forward(today, 5.0, 10.0) == pytest.approx(
+        curves.forward_rate(5.5, 5, 6.0, 10)
+    )
+    with pytest.raises(ValueError):
+        curves.forward_rate(5, 2, 5, 1)
+
+
+def test_slopes_and_flies_need_all_legs():
+    idx = pd.to_datetime(["2026-11-12", "2026-11-13"])
+    p = pd.DataFrame({2.0: [5.0, 5.1], 5.0: [5.5, np.nan], 10.0: [6.0, 6.2]}, index=idx)
+    assert curves.slope(p, 2.0, 10.0).tolist() == pytest.approx([100.0, 110.0])
+    assert curves.fly(p, 2.0, 5.0, 10.0).tolist() == pytest.approx([0.0])
+    assert curves.slope(p, 10.0, 20.0).empty  # no 20y: n/a, never extrapolated
+
+
+def test_flat_curve_has_zero_rolldown():
+    flat = {"b0": 5.0, "b1": 0.0, "b2": 0.0, "b3": 0.0, "tau1": 1.0, "tau2": 5.0}
+    for tenor in (1.0, 2.0, 5.0, 10.0):
+        rolled = float(curves.nss_yield(tenor - 0.25, flat)[0])
+        cr = curves.carry_roll(tenor, 5.0, rolled, funding_pct=5.0, h_years=0.25)
+        assert cr.roll_bp == pytest.approx(0.0, abs=1e-9)
+        assert cr.carry_bp == pytest.approx(0.0, abs=1e-9)
+        assert cr.total_bp == pytest.approx(0.0, abs=1e-9)
+    lin = curves.interp_linear([2, 5, 10], [5.0, 5.0, 5.0], 4.75)
+    assert curves.carry_roll(5.0, 5.0, lin, 4.0, 0.25).roll_bp == pytest.approx(0.0)
+
+
+def test_carry_roll_signs_and_uf():
+    # upward-sloping curve, funding below yield: positive carry and roll
+    cr = curves.carry_roll(5.0, 6.0, 5.9, funding_pct=4.5, h_years=0.25)
+    d = curves.annuity_duration(6.0, 5.0)
+    assert cr.carry_bp == pytest.approx(150 * 0.25 / d)
+    assert cr.roll_bp == pytest.approx(10.0)
+    real = curves.carry_roll(5.0, 2.4, 2.35, funding_pct=4.5, h_years=1 / 12, uf_accrual_pct=0.3)
+    assert real.uf_bp == pytest.approx(30 / curves.annuity_duration(2.4, 5.0))
+    assert real.total_bp == pytest.approx(real.carry_bp + real.roll_bp + real.uf_bp)
+    assert curves.carry_roll(2.0, 5.0, None, 4.0, 0.25).total_bp is None
+
+
+def test_interp_and_duration():
+    assert curves.interp_linear([2, 5], [5.0, 5.6], 3.5) == pytest.approx(5.3)
+    assert curves.interp_linear([2, 5], [5.0, 5.6], 1.75) is None  # no extrapolation
+    assert curves.annuity_duration(0.0, 5.0) == pytest.approx(5.0)
+    assert curves.annuity_duration(5.0, 0.5) == pytest.approx(0.5 / 1.025)
+    assert 4.0 < curves.annuity_duration(5.0, 5.0) < 5.0
+
+
+def test_avg_path_rate():
+    steps = [(date(2026, 12, 17), 4.25)]
+    # 30 days: 16 days at 4.50 (Dec 1-16), 14 at 4.25
+    r = curves.avg_path_rate(4.5, steps, date(2026, 12, 1), date(2026, 12, 31))
+    assert r == pytest.approx((4.5 * 16 + 4.25 * 14) / 30)
+    assert curves.avg_path_rate(4.5, [], date(2026, 12, 1), date(2026, 12, 31), 5) == pytest.approx(
+        4.55
+    )
+    # a step already effective before the start applies from the start
+    assert (
+        curves.avg_path_rate(4.5, [(date(2026, 11, 1), 4.0)], date(2026, 12, 1), date(2026, 12, 2))
+        == 4.0
+    )
+
+
+def test_window_stats_and_percentiles():
+    idx = pd.bdate_range("2026-01-01", "2026-11-13")
+    s = pd.Series(np.linspace(1, 2, len(idx)), index=idx)
+    st = curves.last_stats(s, "1Y")
+    assert st["pct"] == pytest.approx(100.0) and st["z"] > 1.5
+    assert curves.percentile_of(pd.Series([1.0, 2.0, 3.0, 4.0]), 2.0) == 50.0
+    panel = pd.DataFrame({2.0: s, 5.0: s + 1})
+    today = pd.DataFrame({"tenor": [2.0], "value": [1.0]})
+    b = curves.box_stats(panel, date(2026, 11, 13), "6M", today)
+    assert list(b["tenor"]) == [2.0, 5.0]
+    row = b.set_index("tenor").loc[2.0]
+    assert row["min"] <= row["p25"] <= row["median"] <= row["p75"] <= row["max"]
+    assert row["pct"] == 0.0  # 1.0 is below every value in the last 6M
+    assert np.isnan(b.set_index("tenor").loc[5.0, "pct"])
+    with pytest.raises(ValueError):
+        curves.window_start(date(2026, 1, 1), "5D")
+
+
+def test_pca_level_slope_curvature():
+    rng = np.random.default_rng(0)
+    tenors = [1.0, 2.0, 5.0, 10.0]
+    n = 300
+    level = rng.normal(0, 0.05, n)
+    slope_ = rng.normal(0, 0.02, n)
+    base = np.array([5.0, 5.2, 5.5, 6.0])
+    tw = np.array([-1.0, -0.5, 0.3, 1.0])
+    chg = level[:, None] + slope_[:, None] * tw + rng.normal(0, 0.002, (n, 4))
+    panel = pd.DataFrame(base + np.cumsum(chg, axis=0), columns=tenors,
+                         index=pd.bdate_range("2025-01-01", periods=n))  # fmt: skip
+    r = curves.pca_changes(panel, tenors)
+    assert r is not None and r.explained.iloc[0] > 0.8
+    assert (r.loadings["Level"] > 0).all()
+    assert r.loadings["Slope"].iloc[-1] > r.loadings["Slope"].iloc[0]
+    assert r.explained.sum() == pytest.approx(1.0, abs=0.01)
+    assert len(r.scores) == n - 1
+    assert curves.pca_changes(panel.iloc[:10], tenors) is None
+
+
+def test_realized_vol():
+    idx = pd.bdate_range("2026-08-01", "2026-11-13")
+    s = pd.Series([5.0 + 0.01 * (i % 2) for i in range(len(idx))], index=idx)
+    assert curves.realized_vol_bp(s, date(2026, 11, 13)) == pytest.approx(1.0, rel=0.05)
+    assert curves.realized_vol_bp(s.iloc[:5], date(2026, 11, 13)) is None
