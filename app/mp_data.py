@@ -456,8 +456,12 @@ def board_data() -> dict[str, object]:
     profiles = board_src.load_profiles()
     ov_path = CONFIG_DIR / "board_overrides.yaml"
     overrides = yaml.safe_load(ov_path.read_text(encoding="utf-8")) if ov_path.exists() else {}
-    keys = set(auth["surname_key"]) if not auth.empty else set()
-    photos = {k: str(p) for k in keys if (p := board_src.find_photo(k))}
+    current = auth[auth["end_year"].isna()] if not auth.empty else auth
+    photos = {
+        r.surname_key: str(p)
+        for r in current.itertuples(index=False)
+        if (p := board_src.find_photo(r.full_name))
+    }
     return {
         "authorities": auth,
         "profiles": profiles,

@@ -56,14 +56,18 @@ def test_person_page_layout_change():
         parse_person_page("<html><body><p>nothing</p></body></html>")
 
 
-def test_photo_must_be_a_real_image(tmp_path: Path):
-    photos = tmp_path / "photos"
-    photos.mkdir()
-    (photos / "cowan.jpg").write_bytes(b"<html>Incapsula challenge</html>")
-    assert find_photo("Cowan", tmp_path) is None
-    (photos / "costa.png").write_bytes(b"\x89PNG\r\n\x1a\n" + b"0" * 20)
-    assert find_photo("Costa", tmp_path) == photos / "costa.png"
-    assert is_image(photos / "costa.png")
+def test_photo_matching_and_validation(tmp_path: Path):
+    pics = tmp_path / "Board-Pictures"
+    pics.mkdir()
+    png = b"\x89PNG\r\n\x1a\n" + b"0" * 20
+    (pics / "alberto-naudon-2024.png").write_bytes(png)
+    (pics / "Luis-Felipe-Céspedes.png").write_bytes(png)
+    (pics / "kevin-cowan.png").write_bytes(b"<html>Incapsula challenge</html>")  # not an image
+    assert find_photo("Alberto Naudon Dell'Oro", tmp_path).name == "alberto-naudon-2024.png"
+    assert find_photo("Luis Felipe Céspedes Cifuentes", tmp_path).name == "Luis-Felipe-Céspedes.png"
+    assert find_photo("Kevin Cowan Logan", tmp_path) is None
+    assert find_photo("Rosanna Costa Costa", tmp_path) is None
+    assert is_image(pics / "alberto-naudon-2024.png")
 
 
 def test_current_board_and_stance_join(load_text_fixture):

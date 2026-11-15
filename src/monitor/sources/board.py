@@ -8,8 +8,8 @@
   name in ``.info-investigador p.f-opensans-bold``, title in the next paragraph, then the bio
   (fixture: tests/fixtures/bcch_person_page_cowan.html).
 * Photos: the site's bot protection blocks image downloads, so the browser save stores a challenge
-  page instead of the image. Real photos go in ``board/photos/<surname>.jpg|png``; anything that
-  isn't a real image (checked by magic bytes) is ignored.
+  page instead of the image. Photos saved separately go in any subfolder of ``board/`` (e.g.
+  ``Board-Pictures/``), named with the member's name words; non-images are ignored (magic bytes).
 """
 
 from __future__ import annotations
@@ -131,14 +131,23 @@ def is_image(path: Path) -> bool:
     return head.startswith(IMAGE_MAGIC) or (head[:4] == b"RIFF" and head[8:12] == b"WEBP")
 
 
-def find_photo(surname: str, board_dir: Path = BOARD_DIR) -> Path | None:
-    """board/photos/<key>.(jpg|jpeg|png|webp) if it's a real image."""
-    folder = board_dir / "photos"
-    for ext in ("jpg", "jpeg", "png", "webp"):
-        p = folder / f"{ascii_key(surname)}.{ext}"
-        if p.exists() and is_image(p):
-            return p
-    return None
+PHOTO_EXT = (".jpg", ".jpeg", ".png", ".webp")
+
+
+def find_photo(full_name: str, board_dir: Path = BOARD_DIR) -> Path | None:
+    """A real image in any subfolder of board/ whose file-name words all appear in the member's
+    name (accent-insensitive, digits ignored): 'alberto-naudon-2024.png' matches
+    'Alberto Naudon Dell'Oro'; 'costa.jpg' matches 'Rosanna Costa Costa'."""
+    name_tokens = set(ascii_key(full_name).split("-"))
+    best: tuple[int, Path] | None = None
+    for f in sorted(board_dir.glob("*/*")):
+        if f.suffix.lower() not in PHOTO_EXT or f.parent.name.endswith("_files"):
+            continue
+        toks = {t for t in ascii_key(f.stem).split("-") if t and not t.isdigit()}
+        better = best is None or len(toks) > best[0]
+        if toks and toks <= name_tokens and better and is_image(f):
+            best = (len(toks), f)
+    return best[1] if best else None
 
 
 def match_profile(full_name: str, profiles: list[Profile]) -> Profile | None:

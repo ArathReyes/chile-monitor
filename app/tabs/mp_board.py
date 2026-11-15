@@ -248,8 +248,7 @@ def render() -> None:
             "Composition and terms: BCCh 'Nómina de autoridades' PDF (years only). Hawk/dove: "
             f"revealed stance from {len(rec)} press releases ({asof}), of which "
             f"{int((~rec['unanimous']).sum())} had dissents; unanimous statements don't name "
-            "members, so no dissent doesn't mean neutral. Photos: the site blocks image "
-            "downloads; add them as data/manual/bcch_web/board/photos/<surname>.jpg."
+            "members, so no dissent doesn't mean neutral. Photos: saved manually (BCCh profiles)."
         )
         former = former_in_statements(stance, board, auth, bd["aliases"])
         if not former.empty:
