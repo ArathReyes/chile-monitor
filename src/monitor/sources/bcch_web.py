@@ -173,13 +173,22 @@ def _store(
         _ingest_survey_pdf(conn, content, sha, filename)
     if filename.lower().endswith(".pdf") and text is None:
         log.warning("bcch_web: %s has no text layer (scanned?); stored without text", filename)
+    meeting_id, published = None, guess_date(title, filename)
+    if kind == "statements" and text:
+        from monitor.models.statements import meeting_date
+
+        try:
+            published = meeting_date(text)
+            meeting_id = f"RPM-{published:%Y-%m}"
+        except ValueError as e:
+            log.warning("bcch_web: %s: %s", filename, e)
     storage.upsert_document(
         conn,
         doc_id=f"{kind}:{sha[:16]}",
         kind=kind,
         institution="BCCh",
-        meeting_id=None,
-        published_at=guess_date(title, filename),
+        meeting_id=meeting_id,
+        published_at=published,
         title=title or filename,
         url=url,
         raw_path=str(path),
@@ -201,6 +210,36 @@ def _ingest_survey_pdf(
         log.warning("bcch_web: %s is not a parseable EEE results PDF: %s", filename, e)
 
 
+def standardize_statement_files(folder: Path) -> list[tuple[str, str]]:
+    """Rename statement PDFs to rpm_<date>_statement_en.pdf using the date in their text.
+
+    Returns (old, new) pairs and appends them to <folder>/_rename_log.csv. Raises on collisions
+    or unparseable files rather than guessing.
+    """
+    import csv
+
+    import pdfplumber
+
+    from monitor.models.statements import meeting_date, standard_filename
+
+    plan: list[tuple[Path, Path]] = []
+    for f in sorted(folder.glob("*.pdf")):
+        with pdfplumber.open(f) as pdf:
+            head = pdf.pages[0].extract_text() or ""
+        target = folder / standard_filename(meeting_date(head))
+        if target.name != f.name:
+            plan.append((f, target))
+    targets = [t for _, t in plan]
+    if len(set(targets)) != len(targets) or any(t.exists() for t in targets):
+        raise ValueError("standardize: target name collision; nothing renamed")
+    with (folder / "_rename_log.csv").open("a", newline="", encoding="utf-8") as fh:
+        w = csv.writer(fh)
+        for src, dst in plan:
+            src.rename(dst)
+            w.writerow([src.name, dst.name])
+    return [(a.name, b.name) for a, b in plan]
+
+
 def ingest_kind(
     conn: duckdb.DuckDBPyConnection,
     kind: str,
@@ -217,6 +256,8 @@ def ingest_kind(
     known_sha = storage.document_shas(conn)
     links: list[DocLink] = []
     for f in sorted(folder.iterdir()):
+        if f.name.startswith(("_", ".")):  # our own logs / hidden files
+            continue
         suffix = f.suffix.lower()
         if suffix in (".html", ".htm"):
             links += extract_document_links(f.read_text(encoding="utf-8", errors="replace"))

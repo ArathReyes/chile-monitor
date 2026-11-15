@@ -115,6 +115,10 @@ CREATE TABLE IF NOT EXISTS ingest_log (
 """
 
 
+# Idempotent migrations for databases created before a column existed.
+MIGRATIONS = ("ALTER TABLE documents ADD COLUMN IF NOT EXISTS meeting_id VARCHAR",)
+
+
 def _first(conn: duckdb.DuckDBPyConnection, sql: str, params: list[Any] | None = None) -> Any:
     """First column of the first row, reading the result to completion.
 
@@ -142,6 +146,8 @@ def connect(path: Path | str | None = None, read_only: bool = False) -> duckdb.D
     conn = duckdb.connect(target, read_only=read_only)
     if not read_only:
         conn.execute(SCHEMA)
+        for stmt in MIGRATIONS:
+            conn.execute(stmt)
     return conn
 
 
@@ -288,6 +294,7 @@ def upsert_document(conn: duckdb.DuckDBPyConnection, **row: Any) -> None:
     conn.execute(
         f"INSERT INTO documents ({', '.join(cols)}) VALUES ({', '.join('?' * len(cols))}) "
         "ON CONFLICT (doc_id) DO UPDATE SET title = excluded.title, url = excluded.url, "
+        "meeting_id = excluded.meeting_id, "
         "published_at = excluded.published_at, raw_path = excluded.raw_path, "
         "text = excluded.text",
         [row.get(c) for c in cols],

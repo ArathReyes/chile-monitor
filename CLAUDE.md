@@ -28,7 +28,7 @@ Sources (APIs, scrapers) → src/monitor/sources/*  (one module per source, retu
                                                    except through the Refresh action, which calls the jobs layer)
 ```
 - `config/series.yaml` is the **series registry**: every time series the app uses, with source, source code, frequency, unit, tab and transform. Adding a series = editing YAML, not code. Entries carry `verified: true|false`; unverified codes must be confirmed before a job relies on them.
-- `config/meetings.yaml`: BCCh and FOMC meeting dates (`meeting_id`, `decision_date`, optional `effective_date` — defaults to the next CL business day — `has_ipom`, `source`, `confirmed`). Entries sourced from prediction-market rules stay `confirmed: false` until checked against the BCCh calendar.
+- `config/meetings.yaml`: BCCh and FOMC meeting dates (past BCCh meetings regenerated from statements) (`meeting_id`, `decision_date`, optional `effective_date` — defaults to the next CL business day — `has_ipom`, `source`, `confirmed`). Entries sourced from prediction-market rules stay `confirmed: false` until checked against the BCCh calendar.
 - `config/sources.yaml`: base URLs, rate limits, scraper targets.
 - The **Refresh** button on each tab triggers that tab's ingestion jobs, then reloads from DuckDB. Cache with `st.cache_data` using sensible TTLs.
 - `src/monitor` is an installed package (src layout); `app/` imports it as `monitor`. App tab modules live in `app/tabs/` (the calendar tab is `calendar_tab.py` to avoid shadowing stdlib `calendar`).
@@ -56,6 +56,7 @@ Sources (APIs, scrapers) → src/monitor/sources/*  (one module per source, retu
 - Logging with the stdlib `logging` module. Every job writes to `ingest_log`.
 - Tests: pytest. Source parsers are tested against **saved fixtures** in `tests/fixtures/`, not live calls. Mark live-API tests `@pytest.mark.live`.
 - Keep functions small. Run `ruff check` and `ruff format` before finishing a task.
+- Schema changes to existing tables go in `storage.MIGRATIONS` (idempotent `ALTER ... IF NOT EXISTS`), since `CREATE TABLE IF NOT EXISTS` won't alter a live database.
 - DuckDB 2.x: never use `fetchone()` (it leaves the result open and blocks the next statement on the connection); use `storage._first()` / `fetchall()`. DuckDB returns DATE columns to pandas as `datetime64`.
 
 ## Web scraping rules
@@ -90,8 +91,8 @@ BDE REST notes: request dates `firstdate`/`lastdate` are `YYYY-MM-DD`; response 
 ## Tabs (status: placeholder unless noted)
 1. **Monetary Policy** (implemented, spec 01; sub-tabs: Overview · Board & Communication · Decision History · Implied Path & Probabilities · Surveys). Code: `app/tabs/monetary_policy.py`, `app/tabs/mp_*.py`, data layer `app/mp_data.py`, models `models/tpm_implied.py`, `models/surprises.py`, `models/prediction_markets.py`, `models/text_analysis.py`; jobs `jobs/mp_daily.py`, `jobs/bcch_series.py`, `jobs/snapshot_markets.py` (hourly).
    - Implemented: Overview KPIs, implied path (SPC + EOF prior + Kalshi anchor) with probabilities and diagnostics, Kalshi/Polymarket panels, decision history (from TPM changes + meetings.yaml) with EOF/EEE surprises, EEE/EOF survey charts, EEE decile table once PDFs are saved.
-   - Pending manual documents: board cards, statement archive + diff (engine ready), minutes, vote record/dissents (regex to be built on real statements), IPoM corridor. Hawk/dove: no LLM; the EOF statement-bias series (`eof_statement_bias`) is shown but its scale is unconfirmed.
-   - Pending full meeting calendar: hold meetings in history, survey-vs-market panel.
+   - Statements: 45 English press releases May 2021 – Oct 2026 (complete set, saved manually, standardized names). Parsed by `models/statements.py` (date, decision, vote, dissents; all 45 decisions match BDE TPM changes). `models/board.py` gives the vote record and each member's revealed stance from dissents (gap = preferred − decided bp). `scripts/sync_meetings_from_statements.py` rebuilds past meetings in meetings.yaml.
+   - Pending: board pages (photo, education, role, term; parser to be written against the saved HTML), minutes (optional: dissent rationale, options discussed), IPoM corridor. No LLM: the EOF statement-bias series (`eof_statement_bias`) is shown but its scale is unconfirmed.
 2. **Chile Macro**: CPI headline, core (IPC SAE), goods/services; IMACEC (mining vs non-mining, 3m/3m SAAR); labor; trade; USD/CLP dólar observado. Tools: **UF carry calculator**, **CPI seasonality/nowcast table**, **surprise index** (actual minus EEE median), data vintages. Source: BDE API; INE calendar.
 3. **Curves & Rates**: nominal BCP/BTP and real BCU/BTU curves, breakevens, SPC curve (nominal and UF), 1d/1w/1m changes, carry/rolldown, spread vs UST. Source: BDE (daily, T-1, transaction-based with gaps) + Informativo Diario; FRED for UST.
 4. **FX & Flows**: USD/CLP, BCCh FX operations, formal FX market flows, non-resident SPC positioning (BDE daily derivatives tables), AFP flows (Superintendencia de Pensiones, monthly, VERIFY). Source: BDE, Informativo Diario.

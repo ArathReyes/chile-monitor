@@ -9,7 +9,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from charts import ROLE, base_layout, line
-from mp_ui import pending, refresh_row, series_caption
+from mp_ui import refresh_row, series_caption
 
 
 def _kpis(fit, fi, summary, tab) -> None:
@@ -58,14 +58,16 @@ def _kpis(fit, fi, summary, tab) -> None:
         f"survey {fi.survey_date}",
         delta_color="off",
     )
-    last = tab[tab["change_bp"] != 0].iloc[-1] if (tab["change_bp"] != 0).any() else None
-    if last is not None:
+    past = tab[tab["decision_date"] < date.today()]
+    if not past.empty:
+        last = past.iloc[-1]
+        vote = (last.vote or "vote n/a").split(" (")[0]
         c[5].metric(
-            "Last move",
+            "Last decision",
             f"{last.change_bp:+.0f}bp",
-            f"{last.decision_date:%d %b %Y} · vote n/a",
+            f"{last.decision_date:%d %b %Y} · {vote}",
             delta_color="off",
-            help="Vote record needs the statement documents.",
+            help=last.vote or "Vote from the BCCh press release",
         )
 
 
@@ -123,7 +125,21 @@ def _what_changed(tab, fit) -> None:
             f"{eof_then.index[-1]:%d %b} → {eof_now.index[-1]:%d %b}",
             delta_color="off",
         )
-    c[2].metric("Statement diff", "pending", "needs statement documents", delta_color="off")
+    stm = mp_data.statements()
+    if len(stm) >= 2:
+        from monitor.models.statements import normalize
+        from monitor.models.text_analysis import diff_stats
+
+        ds = diff_stats(normalize(stm.iloc[-2]["text"]), normalize(stm.iloc[-1]["text"]))
+        c[2].metric(
+            "Statement change",
+            f"{ds['share_changed']:.0%} of words",
+            f"{stm.iloc[-2]['meeting_date']:%d %b} → {stm.iloc[-1]['meeting_date']:%d %b}",
+            delta_color="off",
+            help="Word-level diff; see Board & Communication",
+        )
+    else:
+        c[2].metric("Statement change", "n/a", "no statements loaded", delta_color="off")
     st.caption(
         f"Last meeting used: {last_dec} "
         f"(from {'meetings.yaml' if past.iloc[-1].from_meetings else 'TPM changes'})."
@@ -149,7 +165,7 @@ def render() -> None:
     )
     st.markdown("#### What changed since the last meeting")
     _what_changed(tab, fit)
-    pending(
-        "Hawk/dove score: the Anthropic API is not used. Text scoring and the statement diff "
-        "summary arrive with the statement documents."
+    st.caption(
+        "Board stances (from statement dissents), vote record and statement diffs: "
+        "**Board & Communication** sub-tab."
     )

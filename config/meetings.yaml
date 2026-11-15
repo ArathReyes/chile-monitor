@@ -9,22 +9,198 @@
 bcch:
   timezone: America/Santiago
   meetings:
-    - meeting_id: RPM-2026-10
-      decision_date: 2026-10-27
-      source: "Kalshi KXCBDCHILE-26OCT27 + Polymarket rules ('scheduled for October 27, 2026')"
-      confirmed: false
-    - meeting_id: RPM-2026-12
-      decision_date: 2026-12-15
-      source: "Kalshi KXCBDCHILE-26DEC15 + Polymarket rules ('scheduled for December 15, 2026')"
-      confirmed: false
-    - meeting_id: RPM-2027-01
-      decision_date: 2027-01-26
-      source: "Polymarket rules ('scheduled for January 26, 2027')"
-      confirmed: false
-    - meeting_id: RPM-2027-03
-      decision_date: 2027-03-30
-      source: "Polymarket rules ('scheduled for March 30, 2027')"
-      confirmed: false
+  - meeting_id: RPM-2021-05
+    decision_date: 2021-05-13
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2021-06
+    decision_date: 2021-06-08
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2021-07
+    decision_date: 2021-07-14
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2021-08
+    decision_date: 2021-08-31
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2021-10
+    decision_date: 2021-10-13
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2021-12
+    decision_date: 2021-12-14
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2022-01
+    decision_date: 2022-01-26
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2022-03
+    decision_date: 2022-03-29
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2022-05
+    decision_date: 2022-05-05
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2022-06
+    decision_date: 2022-06-07
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2022-07
+    decision_date: 2022-07-13
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2022-09
+    decision_date: 2022-09-06
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2022-10
+    decision_date: 2022-10-12
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2022-12
+    decision_date: 2022-12-06
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2023-01
+    decision_date: 2023-01-26
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2023-04
+    decision_date: 2023-04-04
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2023-05
+    decision_date: 2023-05-12
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2023-06
+    decision_date: 2023-06-19
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2023-07
+    decision_date: 2023-07-28
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2023-09
+    decision_date: 2023-09-05
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2023-10
+    decision_date: 2023-10-26
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2023-12
+    decision_date: 2023-12-19
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2024-01
+    decision_date: 2024-01-31
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2024-04
+    decision_date: 2024-04-02
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2024-05
+    decision_date: 2024-05-23
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2024-06
+    decision_date: 2024-06-18
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2024-07
+    decision_date: 2024-07-31
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2024-09
+    decision_date: 2024-09-03
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2024-10
+    decision_date: 2024-10-17
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2024-12
+    decision_date: 2024-12-17
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2025-01
+    decision_date: 2025-01-28
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2025-03
+    decision_date: 2025-03-21
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2025-04
+    decision_date: 2025-04-29
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2025-06
+    decision_date: 2025-06-17
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2025-07
+    decision_date: 2025-07-29
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2025-09
+    decision_date: 2025-09-09
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2025-10
+    decision_date: 2025-10-28
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2025-12
+    decision_date: 2025-12-16
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2026-01
+    decision_date: 2026-01-27
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2026-03
+    decision_date: 2026-03-24
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2026-04
+    decision_date: 2026-04-28
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2026-06
+    decision_date: 2026-06-16
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2026-07
+    decision_date: 2026-07-28
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2026-09
+    decision_date: 2026-09-08
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2026-10
+    decision_date: 2026-10-27
+    source: BCCh press release (statement)
+    confirmed: true
+  - meeting_id: RPM-2026-12
+    decision_date: 2026-12-15
+    source: Kalshi KXCBDCHILE-26DEC15 + Polymarket rules ('scheduled for December 15, 2026')
+    confirmed: false
+  - meeting_id: RPM-2027-01
+    decision_date: 2027-01-26
+    source: Polymarket rules ('scheduled for January 26, 2027')
+    confirmed: false
+  - meeting_id: RPM-2027-03
+    decision_date: 2027-03-30
+    source: Polymarket rules ('scheduled for March 30, 2027')
+    confirmed: false
 fomc:
   timezone: America/New_York
   meetings: []

@@ -261,7 +261,11 @@ def decision_table(since: date = date(2010, 1, 1)) -> pd.DataFrame:
     dec = decisions_from_tpm(tpm)
     mt = decisions_from_meetings(meetings(), tpm, date.today())
     if not mt.empty:
-        dec = dec[~dec["effective_date"].isin(mt["effective_date"])]
+        # drop TPM-derived rows that fall within a configured meeting's window
+        covered = set()
+        for d in mt["decision_date"]:
+            covered |= {d + pd.Timedelta(days=k) for k in range(0, 6)}
+        dec = dec[~dec["effective_date"].isin(covered)]
         dec = pd.concat([dec, mt], ignore_index=True)
     dec = dec[dec["decision_date"] >= since].sort_values("decision_date").reset_index(drop=True)
     tab = surprise_table(
@@ -279,7 +283,8 @@ def decision_table(since: date = date(2010, 1, 1)) -> pd.DataFrame:
     tab["cpi_yoy"] = [latest_available(cpi_yoy, d, 40) for d in tab["decision_date"]]
     tab["core_yoy"] = [latest_available(core_yoy, d, 40) for d in tab["decision_date"]]
     tab["imacec_yoy"] = [latest_available(imacec_yoy, d, 62) for d in tab["decision_date"]]
-    tab["vote"] = "pending documents"
+    votes = vote_labels()
+    tab["vote"] = [votes.get(d, "") for d in tab["decision_date"]]
     return tab
 
 
@@ -339,3 +344,91 @@ def eee_distribution() -> pd.DataFrame:
     if df.empty:
         return df
     return df[df["section"].str.contains("Pol[ií]tica", regex=True)].reset_index(drop=True)
+
+
+# ------------------------------------------------------------------ statements
+
+
+@st.cache_data(ttl=TTL)
+def statements() -> pd.DataFrame:
+    """Parsed press releases: one row per meeting with text and parsed decision/vote."""
+    from monitor.models.statements import parse_statement
+
+    conn = storage.connect()
+    try:
+        docs = storage.read_documents(conn, "statements")
+    finally:
+        conn.close()
+    rows = []
+    for r in docs.itertuples(index=False):
+        if not isinstance(r.text, str):
+            continue
+        try:
+            p = parse_statement(r.text)
+        except ValueError:
+            continue
+        rows.append(
+            {
+                "meeting_date": p.meeting_date,
+                "meeting_id": p.meeting_id,
+                "parsed": p,
+                "text": r.text,
+                "doc_id": r.doc_id,
+                "sha256": r.sha256,
+            }
+        )
+    df = pd.DataFrame(rows)
+    return df.sort_values("meeting_date").reset_index(drop=True) if not df.empty else df
+
+
+def parsed_statements() -> list:
+    s = statements()
+    return [] if s.empty else list(s["parsed"])
+
+
+def vote_labels() -> dict[date, str]:
+    from monitor.models.board import vote_record
+
+    rec = vote_record(parsed_statements())
+    return {
+        r.meeting_date: r.split if r.unanimous else f"{r.split} ({r.dissent_summary})"
+        for r in rec.itertuples(index=False)
+    }
+
+
+@st.cache_data(ttl=TTL)
+def survey_vs_market(since: date = date(2021, 5, 1)) -> pd.DataFrame:
+    """EOF next-RPM expected change vs SPC-90d-implied change on each EOF round date.
+
+    Target meeting = first configured meeting after the survey date (needs the full calendar).
+    """
+    from monitor.models.surprises import market_implied_change
+
+    eof = series("eof_tpm_next")
+    tpm = series("cl_tpm")
+    spc = series("cl_spc_nom_90d")
+    ms = sorted(meetings())
+    rows = []
+    for ts, exp in eof[eof.index >= pd.Timestamp(since)].items():
+        d = ts.date()
+        nxt = next((m for m in ms if m[0] > d), None)
+        if nxt is None or (nxt[0] - d).days > 70:
+            continue
+        before = tpm.loc[:ts]
+        if before.empty:
+            continue
+        t0 = float(before.iloc[-1])
+        mkt = market_implied_change(nxt[0], nxt[1], t0, spc.loc[:ts], max_quote_age_days=75)
+        rows.append(
+            {
+                "survey_date": d,
+                "target_meeting": nxt[0],
+                "tpm": t0,
+                "eof_change_bp": (exp - t0) * 100,
+                "spc_change_bp": mkt,
+            }
+        )
+    df = pd.DataFrame(rows)
+    if not df.empty:
+        df["gap_bp"] = df["spc_change_bp"] - df["eof_change_bp"]
+    return df

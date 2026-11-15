@@ -49,8 +49,9 @@ def diff_html(old: str, new: str) -> str:
 
 
 def diff_stats(old: str, new: str) -> dict[str, int | float]:
+    """Words added/removed and share changed (1 − difflib similarity of word tokens, 0..1)."""
     ops = word_diff(old, new)
     ins = sum(len(t.split()) for op, t in ops if op == "insert")
     dele = sum(len(t.split()) for op, t in ops if op == "delete")
-    total = max(len(new.split()), 1)
-    return {"words_added": ins, "words_removed": dele, "share_changed": (ins + dele) / total}
+    sim = difflib.SequenceMatcher(a=old.split(), b=new.split(), autojunk=False).ratio()
+    return {"words_added": ins, "words_removed": dele, "share_changed": 1.0 - sim}

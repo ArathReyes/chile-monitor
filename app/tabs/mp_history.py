@@ -6,7 +6,7 @@ import mp_data
 import plotly.graph_objects as go
 import streamlit as st
 from charts import DIVERGING, ROLE, base_layout, line
-from mp_ui import pending, refresh_row, series_caption
+from mp_ui import refresh_row, series_caption
 
 from monitor.models.surprises import summary_stats, surprises_by_year, yoy
 
@@ -146,7 +146,7 @@ def render() -> None:
     )
     with st.expander("Surprises by year"):
         st.dataframe(surprises_by_year(tab).round(2), hide_index=True, width="stretch")
-    pending(
-        "Vote split, dissents and surprises by board president: pending statement/minutes "
-        "documents and board.yaml."
+    st.caption(
+        "Votes from BCCh press releases (May 2021 onward). Surprises by board president: "
+        "pending the board pages (term dates)."
     )

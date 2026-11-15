@@ -13,9 +13,11 @@ Root folder: `chile-monitor/data/manual/bcch_web/` (inside `data/`, which is git
 | `statements/` | RPM statement listing pages (one per year, all years), or the statement PDFs | Política Monetaria → Reunión de Política Monetaria (RPM) → Comunicados | Statement archive, diff, vote record, decision dates |
 | `minutes/` | RPM minutes listing pages, or the minutes PDFs | Same RPM section → Actas / Minutas | Vote detail, dissent rationale, key passages |
 | `ipom/` | IPoM listing page + the latest IPoM's page; any Excel data files ("Gráficos", "Base de datos") | Política Monetaria → Informe de Política Monetaria (IPoM) | TPM corridor, forecast table |
-| `board/` | The Consejo page (and the former-members page if there is one) | Institucional / Quiénes somos → Consejo | Board cards, dissent counts |
+| `board/` | `https://www.bcentral.cl/en/the-bank/corporative-goverment/people` **and each member's page** (e.g. `.../people/rosanna-costa`), saved as **"Webpage, Complete"** so the photos are saved too (they land in a `*_files/` folder next to each page) | The Bank → Corporate Government → People | Board cards: photo, education, role, term. Both URLs were checked 2026-11-14: robots.txt allows them, but bot protection blocks automated access |
 | `calendar/` | The 2026 and 2027 monetary policy calendar page | Prensa → Calendario de política monetaria y financiera. Polymarket's market rules cite `https://www.bcentral.cl/es/web/banco-central/noticias-y-publicaciones/prensa/calendario-de-politica-monetaria-y-financiera`; not verified by the app because the site blocks it | Meeting dates (`config/meetings.yaml`) |
 | `surveys/` | The monthly EEE results PDF, "Gráficos (distribución de respuestas)" | Estadísticas → Encuestas → Encuesta de Expectativas Económicas | EEE median, decile 1/9 and respondent counts, incl. "next / following meeting" TPM |
+
+**Statements:** file names are standardized automatically to `rpm_YYYY-MM-DD_statement_en.pdf` using the meeting date in the text (`_rename_log.csv` keeps the old names). After adding new ones, run `uv run python scripts/sync_meetings_from_statements.py` to refresh `config/meetings.yaml`.
 
 **How to save a page:** open it in the browser, press Cmd+S, and choose the format "Webpage, HTML Only" (or "Page Source"). Any `.html`/`.htm` file name works. You can save PDFs or Excel files directly into the same folders instead.
 

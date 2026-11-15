@@ -117,14 +117,18 @@ def survey_expectation(
 
 
 def market_implied_change(
-    decision: date, effective: date, tpm_before: float, spc90: pd.Series
+    decision: date,
+    effective: date,
+    tpm_before: float,
+    spc90: pd.Series,
+    max_quote_age_days: int = 7,
 ) -> float | None:
     """Approximate SPC-90d-implied change at one meeting, from the quote the day before.
 
     Assumes a single move inside the 90-day window and no term/credit premium (approximation).
     """
     s = _as_series(spc90).loc[: pd.Timestamp(decision - timedelta(days=1))]
-    if not len(s) or (decision - s.index[-1].date()).days > 7:
+    if not len(s) or (decision - s.index[-1].date()).days > max_quote_age_days:
         return None
     q = SwapQuote("spc90", s.index[-1].date(), float(s.iloc[-1]), 360, tenor_days=90)
     fit = fit_path([q], tpm_before, [Step(decision, effective)], cfg=FitConfig(lam=0, mu=0))
