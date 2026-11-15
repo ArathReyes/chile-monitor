@@ -7,6 +7,8 @@ Flag colors (approximate official tones): azul #0039A6, rojo #D52B1E, blanco #FF
 from __future__ import annotations
 
 import base64
+import html
+import random
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -76,6 +78,8 @@ def _css(p: dict[str, str]) -> str:
   flex: none; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.18);
   transform-origin: left center; transition: transform .35s ease;
 }}
+.cm-flag-link {{ display: flex; flex: none; cursor: pointer; line-height: 0; }}
+.cm-flag-link:active .cm-flag {{ transform: scale(0.94); }}
 .cm-header:hover .cm-flag {{ animation: cm-wave 1.6s ease-in-out infinite; }}
 @keyframes cm-wave {{
   0%, 100% {{ transform: perspective(240px) rotateY(0deg) skewY(0deg); }}
@@ -172,11 +176,26 @@ def apply() -> None:
     st.html(_css(_palette()))
 
 
+# Easter egg: the flag links to one of these, picked at random on every render (st.html strips
+# JavaScript, so the choice is made server-side; each rerun re-rolls it).
+FLAG_LINKS = (
+    "https://www.youtube.com/watch?v=UEqTIwRrWvA&list=RDUEqTIwRrWvA&start_radio=1",
+    "https://www.youtube.com/watch?v=ChKqrwa7Ylw&list=RDChKqrwa7Ylw&start_radio=1",
+    "https://www.youtube.com/watch?v=Dy4pEFFbFsA&list=RDDy4pEFFbFsA&start_radio=1",
+)
+
+
+def flag_link(rng: random.Random | None = None) -> str:
+    url = html.escape((rng or random).choice(FLAG_LINKS), quote=True)
+    attrs = f'class="cm-flag-link" href="{url}" target="_blank" rel="noopener noreferrer"'
+    return f"<a {attrs}>{FLAG_IMG}</a>"
+
+
 def header() -> None:
     now_ny = datetime.now(ZoneInfo("America/New_York"))
     now_scl = now_ny.astimezone(ZoneInfo("America/Santiago"))
     st.html(
-        f"""<div class="cm-header">{FLAG_IMG}<div>
+        f"""<div class="cm-header">{flag_link()}<div>
 <h1 class="cm-title">Chile <span>Monitor</span></h1>
 <div class="cm-sub"><span class="cm-dot"></span>Public data only · {now_ny:%a %d %b %Y %H:%M} NY
  · {now_scl:%H:%M} Santiago</div></div></div>"""
