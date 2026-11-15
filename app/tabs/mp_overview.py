@@ -12,6 +12,19 @@ from charts import ROLE, base_layout, line
 from mp_ui import refresh_row, series_caption
 
 
+def eof_for_next_meeting(fi) -> tuple[float | None, str | None]:
+    """EOF answer for the next meeting, shifted by meetings held since the survey round."""
+    from monitor.models.tpm_implied import EOF_MEETING_KEYS, meetings_between
+
+    if fi.survey_date is None:
+        return None, None
+    held = meetings_between(mp_data.meetings(), fi.survey_date, date.today())
+    if held >= len(EOF_MEETING_KEYS):
+        return None, None
+    key = EOF_MEETING_KEYS[held]
+    return fi.eof_latest.get(key), key
+
+
 def _kpis(fit, fi, summary, tab) -> None:
     nxt, nxt_id = mp_data.next_meeting()
     c = st.columns(6)
@@ -51,12 +64,14 @@ def _kpis(fit, fi, summary, tab) -> None:
         f"{first.implied_tpm:.2f}% after",
         delta_color="off",
     )
-    eof = fi.eof_latest.get("next")
+    eof, key = eof_for_next_meeting(fi)
     c[4].metric(
         "EOF median (next)",
         f"{eof:.2f}%" if eof is not None else "n/a",
-        f"survey {fi.survey_date}",
+        f"survey {fi.survey_date}" + (f" · '{key}' answer" if key and key != "next" else ""),
         delta_color="off",
+        help="The round's answer for the next meeting; shifted when a meeting has been held "
+        "since the survey (e.g. the '1 reunión adelante' answer).",
     )
     past = tab[tab["decision_date"] < date.today()]
     if not past.empty:
