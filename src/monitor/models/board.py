@@ -220,3 +220,44 @@ def former_in_statements(
             }
         )
     return pd.DataFrame(rows)
+
+
+# ----------------------------------------------------------------- statement tone
+
+TONE_NEUTRAL = 5.0
+
+
+def tone_label(score: float) -> str:
+    if score >= 7.5:
+        return "Hawkish"
+    if score > TONE_NEUTRAL:
+        return "Mildly hawkish"
+    if score == TONE_NEUTRAL:
+        return "Neutral"
+    if score > 2.5:
+        return "Mildly dovish"
+    return "Dovish"
+
+
+def statement_tone(meeting_dates: list, tone: pd.Series, max_days: int = 35) -> pd.DataFrame:
+    """EOF tone of each meeting's statement: first EOF round after the decision and before the
+    next meeting (within max_days). Scale 0 most dovish, 5 neutral, 10 most hawkish."""
+    t = tone.dropna().copy()
+    t.index = pd.to_datetime(t.index)
+    ms = sorted(pd.Timestamp(d) for d in meeting_dates)
+    rows = []
+    for i, m in enumerate(ms):
+        nxt = ms[i + 1] if i + 1 < len(ms) else m + pd.Timedelta(days=max_days + 1)
+        cut = min(nxt, m + pd.Timedelta(days=max_days))
+        win = t[(t.index > m) & (t.index <= cut)]
+        if len(win):
+            score = float(win.iloc[0])
+            rows.append(
+                {
+                    "meeting_date": m.date(),
+                    "eof_date": win.index[0].date(),
+                    "tone": score,
+                    "tone_label": tone_label(score),
+                }
+            )
+    return pd.DataFrame(rows, columns=["meeting_date", "eof_date", "tone", "tone_label"])

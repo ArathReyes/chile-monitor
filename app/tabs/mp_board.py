@@ -8,7 +8,7 @@ import mp_data
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-from charts import ROLE, base_layout, line
+from charts import base_layout
 from components import source_badge
 from mp_ui import pending, series_caption
 
@@ -54,10 +54,12 @@ def _stance_line(r) -> None:
         )
 
 
-def _cards(board: pd.DataFrame, profiles: dict, photos: dict) -> None:
+def _cards(board: pd.DataFrame, profiles: list, photos: dict) -> None:
+    from monitor.sources.board import match_profile
+
     cols = st.columns(min(len(board), 3) or 1)
     for i, r in enumerate(board.itertuples(index=False)):
-        prof = profiles.get(r.surname_key)
+        prof = match_profile(r.full_name, profiles)
         with cols[i % len(cols)].container(border=True):
             c1, c2 = st.columns([1, 2.4])
             with c1:
@@ -85,6 +87,63 @@ def _cards(board: pd.DataFrame, profiles: dict, photos: dict) -> None:
             if prof:
                 with st.expander("Bio"):
                     st.write(prof.bio)
+
+
+TONE_COLORS = {
+    "Hawkish": "#e34948",
+    "Mildly hawkish": "#ec835a",
+    "Neutral": "#8b8a85",
+    "Mildly dovish": "#6da7ec",
+    "Dovish": "#2a78d6",
+}
+
+
+def _tone_chart() -> None:
+    t = mp_data.statement_tones()
+    if t.empty:
+        st.caption("No EOF tone readings yet.")
+        return
+    fig = go.Figure()
+    fig.add_hrect(y0=5, y1=10, fillcolor="rgba(227,73,72,0.06)", line_width=0)
+    fig.add_hrect(y0=0, y1=5, fillcolor="rgba(42,120,214,0.06)", line_width=0)
+    fig.add_hline(
+        y=5,
+        line=dict(color="#8b8a85", width=1, dash="dot"),
+        annotation_text="neutral",
+        annotation_position="top left",
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=t["meeting_date"],
+            y=t["tone"],
+            mode="lines+markers",
+            name="Statement tone",
+            line=dict(color="#52514e", width=2),
+            marker=dict(
+                size=10,
+                color=[TONE_COLORS[x] for x in t["tone_label"]],
+                line=dict(width=2, color="white"),
+            ),
+            customdata=t[["tone_label", "eof_date"]],
+            hovertemplate="Statement %{x}<br>tone %{y:g}/10 · %{customdata[0]}"
+            "<br>EOF round %{customdata[1]}<extra></extra>",
+        )
+    )
+    fig.update_layout(showlegend=False, hovermode="closest", yaxis_range=[0, 10])
+    st.plotly_chart(
+        base_layout(
+            fig, "Tone of each BCCh statement (0 dovish · 5 neutral · 10 hawkish)", "score", 300
+        ),
+        width="stretch",
+    )
+    last = t.iloc[-1]
+    st.caption(
+        f"Latest: {last.meeting_date:%d %b %Y} statement scored {last.tone:g}/10 "
+        f"({last.tone_label}). Source: EOF 'tone in the latest announcements made by the "
+        "BCCh regarding the last MPM' (BDE F089.EOF.PS_TPM.CMA.D), median, from the round "
+        "15–22 days after each meeting."
+    )
+    series_caption(["eof_statement_bias"])
 
 
 def _dissent_chart(mv: pd.DataFrame) -> go.Figure | None:
@@ -129,6 +188,10 @@ def _archive(stm: pd.DataFrame) -> None:
     from monitor.models.statements import normalize
 
     t_cur = normalize(cur["text"])
+    tn = mp_data.statement_tones().set_index("meeting_date")
+    if cur["meeting_date"] in tn.index:
+        r = tn.loc[cur["meeting_date"]]
+        st.markdown(f"EOF tone: **{r['tone']:g}/10 · {r['tone_label']}** (round {r['eof_date']})")
     if idx > 0:
         prev = stm.iloc[idx - 1]
         t_prev = normalize(prev["text"])
@@ -203,6 +266,11 @@ def render() -> None:
         st.plotly_chart(fig, width="stretch")
 
     st.markdown("#### Vote record")
+    tones = mp_data.statement_tones().set_index("meeting_date")
+    rec = rec.assign(
+        tone=rec["meeting_date"].map(tones["tone"]),
+        tone_label=rec["meeting_date"].map(tones["tone_label"]),
+    )
     view = (
         rec.sort_values("meeting_date", ascending=False)
         .rename(
@@ -212,6 +280,8 @@ def render() -> None:
                 "new_rate": "TPM",
                 "split": "Vote",
                 "dissent_summary": "Dissents (preferred move)",
+                "tone": "EOF tone (0–10)",
+                "tone_label": "Tone",
             }
         )
         .drop(columns=["unanimous", "meeting_id"])
@@ -228,19 +298,5 @@ def render() -> None:
         "the dissent rationale and the policy options discussed."
     )
 
-    st.markdown("#### Market-perceived statement bias (EOF)")
-    s = mp_data.series("eof_statement_bias", date(2021, 1, 1))
-    if not s.empty:
-        f2 = go.Figure()
-        line(
-            f2, s.index, s.values, "EOF: perceived bias of BCCh statements", ROLE["eof"], shape="hv"
-        )
-        f2.update_traces(mode="lines+markers")
-        st.plotly_chart(
-            base_layout(f2, "EOF: 'Percepción del sesgo Comunicados BCCh'", "index", 260),
-            width="stretch",
-        )
-        series_caption(["eof_statement_bias"])
-        st.caption(
-            f"⚠️ Scale/direction unconfirmed (range {s.min():g}–{s.max():g}); not used as hawk/dove."
-        )
+    st.markdown("#### Statement tone (EOF: how traders read each statement)")
+    _tone_chart()

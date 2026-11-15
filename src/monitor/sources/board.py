@@ -34,7 +34,9 @@ SECTIONS = {
 _ROW = re.compile(r"^(\d{4})\s*-\s*(\d{4})?\s*(.+?)\s*(?:\((\d+)\))?\s*$")
 _PARTICLES = {"de", "del", "de la", "la", "van", "von", "dell"}
 _EDU = re.compile(
-    r"\b(degree|Ph\.?\s?D|doctorate|master'?s?|MBA|M\.?Sc|M\.?A\.|graduat\w*|licenciad\w*)\b", re.I
+    r"\b(degree|bachelor\S*|Ph\.?\s?D|doctorate|master(?:['’]s)?\s+(?:degree|of|in)\b|M\.S\.|MBA|M\.?Sc|"
+    r"engineer(?:ing)? from|licenciad\w*)",
+    re.I,
 )
 IMAGE_MAGIC = (b"\xff\xd8\xff", b"\x89PNG", b"GIF8")
 
@@ -137,6 +139,17 @@ def find_photo(surname: str, board_dir: Path = BOARD_DIR) -> Path | None:
         if p.exists() and is_image(p):
             return p
     return None
+
+
+def match_profile(full_name: str, profiles: list[Profile]) -> Profile | None:
+    """Profile whose name tokens all appear in the authorities full name (accent-insensitive).
+
+    Profile pages drop the maternal surname ('Luis Felipe Céspedes' vs
+    'Luis Felipe Céspedes Cifuentes'), so surname position can't be used.
+    """
+    full = set(ascii_key(full_name).split("-"))
+    hits = [p for p in profiles if set(ascii_key(p.name).split("-")) <= full]
+    return max(hits, key=lambda p: len(p.name)) if hits else None
 
 
 def load_profiles(board_dir: Path = BOARD_DIR) -> list[Profile]:

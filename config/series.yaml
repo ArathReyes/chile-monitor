@@ -286,13 +286,15 @@ series:
 - series_id: eof_statement_bias
   source: bcch
   source_code: F089.EOF.PS_TPM.CMA.D
-  name: EOF percepción del sesgo de comunicados BCCh
+  name: 'EOF: tone of the latest BCCh statement (0 most dovish, 5 neutral, 10 most hawkish)'
   freq: D
-  unit: index
+  unit: score 0-10
   tab: monetary_policy
   transform: level
   verified: true
-  notes: Scale/meaning not confirmed (values like 5-8). VERIFY with EOF methodology before interpreting as hawk/dove.
+  notes: 'EOF ''Sensitivity factors: tone in the latest announcements made by the BCCh regarding the last MPM''
+    (scale per EOF questionnaire, provided by the user 2026-11-14). One reading per meeting, in the round 15-22
+    days after the decision.'
 - series_id: eee_tpm_this_month
   source: bcch
   source_code: F089.TPM.TAS.11.M

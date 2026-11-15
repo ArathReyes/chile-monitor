@@ -90,3 +90,39 @@ def test_current_board_and_stance_join(load_text_fixture):
     assert former.loc["Griffith-Jones", "board_term"] == "not found in authorities list"
     aliased = former_in_statements(stance, board, auth, {"Griffith-Jones": "Novy"})
     assert aliased.set_index("member").loc["Griffith-Jones", "board_term"] == "2022–2025"
+
+
+def test_match_profile_and_education_filter():
+    from monitor.sources.board import Profile, match_profile
+
+    profs = [
+        Profile("Luis Felipe Céspedes", "Board Member", ""),
+        Profile("Rosanna Costa", "Governor", ""),
+    ]
+    assert match_profile("Luis Felipe Céspedes Cifuentes", profs).name == "Luis Felipe Céspedes"
+    assert match_profile("Rosanna Costa Costa", profs).name == "Rosanna Costa"
+    assert match_profile("Claudio Soto Gamboa", profs) is None
+    html = """<html><body><div class="info-investigador"><p class="f-opensans-bold">X Y</p>
+    <p>Board Member</p><p>Mr. X holds an M.S. from Universidad de Chile and a Ph.D. from NYU.
+    He has taught graduate courses in macroeconomics.
+    Other roles include Member of the Council of the Master’s Program at UAI.</p>
+    </div></body></html>"""
+    p = parse_person_page(html)
+    assert len(p.education) == 1 and "Ph.D." in p.education[0]
+
+
+def test_statement_tone_mapping():
+    import pandas as pd
+
+    from monitor.models.board import statement_tone, tone_label
+
+    meetings = [pd.Timestamp("2026-09-08").date(), pd.Timestamp("2026-10-27").date()]
+    tone = pd.Series([5.0, 8.0], index=pd.to_datetime(["2026-09-24", "2026-11-11"]))
+    df = statement_tone(meetings, tone)
+    assert df["tone"].tolist() == [5.0, 8.0]
+    assert df["tone_label"].tolist() == ["Neutral", "Hawkish"]
+    assert tone_label(4.0) == "Mildly dovish" and tone_label(6.0) == "Mildly hawkish"
+    # a reading after the next meeting is not attributed to the earlier one
+    later = [pd.Timestamp("2026-09-08").date(), pd.Timestamp("2026-09-20").date()]
+    df2 = statement_tone(later, tone.iloc[:1])
+    assert df2["meeting_date"].tolist() == [pd.Timestamp("2026-09-20").date()]

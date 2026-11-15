@@ -285,6 +285,8 @@ def decision_table(since: date = date(2010, 1, 1)) -> pd.DataFrame:
     tab["imacec_yoy"] = [latest_available(imacec_yoy, d, 62) for d in tab["decision_date"]]
     votes = vote_labels()
     tab["vote"] = [votes.get(d, "") for d in tab["decision_date"]]
+    tones = statement_tones().set_index("meeting_date")["tone"].to_dict()
+    tab["statement_tone"] = [tones.get(d) for d in tab["decision_date"]]
     return tab
 
 
@@ -451,7 +453,7 @@ def board_data() -> dict[str, object]:
         auth, err = pd.DataFrame(), str(e)
     else:
         err = None
-    profiles = {board_src.surname_key(p.name): p for p in board_src.load_profiles()}
+    profiles = board_src.load_profiles()
     ov_path = CONFIG_DIR / "board_overrides.yaml"
     overrides = yaml.safe_load(ov_path.read_text(encoding="utf-8")) if ov_path.exists() else {}
     keys = set(auth["surname_key"]) if not auth.empty else set()
@@ -463,3 +465,12 @@ def board_data() -> dict[str, object]:
         "aliases": (overrides or {}).get("aliases") or {},
         "error": err,
     }
+
+
+@st.cache_data(ttl=TTL)
+def statement_tones() -> pd.DataFrame:
+    """EOF tone (0 dovish, 5 neutral, 10 hawkish) of each meeting's statement."""
+    from monitor.models.board import statement_tone
+
+    past = [m[0] for m in meetings() if m[0] <= date.today()]
+    return statement_tone(past, series("eof_statement_bias"))

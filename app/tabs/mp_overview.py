@@ -102,7 +102,20 @@ def _what_changed(tab, fit) -> None:
     common = now_p.index.intersection(then_p.index)
     eof_now = mp_data.series("eof_tpm_next")
     eof_then = eof_now.loc[: pd.Timestamp(last_dec)]
-    c = st.columns(3)
+    c = st.columns(4)
+    tones = mp_data.statement_tones()
+    if not tones.empty:
+        lt = tones.iloc[-1]
+        prev = tones.iloc[-2]["tone"] if len(tones) > 1 else None
+        delta = f"{lt.tone - prev:+g} vs previous" if prev is not None else ""
+        c[3].metric(
+            "Statement tone (EOF)",
+            f"{lt.tone:g}/10 · {lt.tone_label}",
+            delta,
+            delta_color="off",
+            help=f"{lt.meeting_date:%d %b %Y} statement; 0 dovish, "
+            "5 neutral, 10 hawkish (EOF round after the meeting)",
+        )
     if len(common):
         d = (now_p[common] - then_p[common]) * 100
         c[0].metric(
