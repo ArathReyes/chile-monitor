@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chile Monitor · Calendar</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🇨🇱</text></svg>">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{--bg:#F5F7FB;--panel:#FFFFFF;--soft:#E9EFF9;--ink:#14213D;--muted:#5B6478;--line:#D5DDEC;
+--blue:#0039A6;--red:#D52B1E;--radius:.6rem}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg) radial-gradient(1200px 500px at 85% -10%,rgba(0,57,166,.08),transparent 60%) no-repeat;
+color:var(--ink);font:15px/1.5 Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+a{color:var(--blue)}
+.wrap{max-width:1500px;margin:0 auto;padding:16px 24px 48px}
+.cm-header{display:flex;gap:14px;align-items:center;margin:4px 0 10px}
+.cm-flag-link img{height:40px;width:auto;border-radius:6px;box-shadow:0 2px 8px rgba(20,33,61,.18);display:block;transition:transform .2s}
+.cm-flag-link:hover img{transform:rotate(-4deg) scale(1.06)}
+.cm-title{font:700 30px/1.1 'Space Grotesk',Inter,sans-serif;margin:0;letter-spacing:-.01em}
+.cm-title span{color:var(--blue)}
+.cm-sub{color:var(--muted);font-size:13px}
+.cm-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#1a7f37;margin-right:6px;vertical-align:1px}
+nav.top{display:flex;flex-wrap:wrap;gap:2px;border-bottom:1px solid var(--line);margin:8px 0 18px}
+nav.top a{padding:9px 14px;text-decoration:none;color:var(--muted);font-weight:500;border-bottom:3px solid transparent;margin-bottom:-1px}
+nav.top a:hover{color:var(--ink)}
+nav.top a[aria-current]{color:var(--blue);border-bottom-color:var(--red);font-weight:600}
+.tablist{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 16px}
+.tablist button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+padding:6px 14px;border-radius:999px;cursor:pointer;transition:background .15s,border-color .15s}
+.tablist button:hover{border-color:var(--blue)}
+.tablist button[aria-selected=true]{background:var(--blue);border-color:var(--blue);color:#fff}
+.tabs .tabs .tablist button{font-size:13px;padding:4px 12px}
+.cols{display:grid;gap:16px;align-items:start}
+@media (max-width:900px){.cols{grid-template-columns:1fr!important}}
+.col{min-width:0}
+h2,h3,h4,h5{font-family:'Space Grotesk',Inter,sans-serif;margin:18px 0 8px}
+.md p{margin:6px 0}
+.caption{color:var(--muted);font-size:13px;margin:4px 0 10px}
+.caption p{margin:2px 0}
+.metric{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;margin:0 0 10px;transition:box-shadow .15s,transform .15s}
+.metric:hover{box-shadow:0 4px 16px rgba(20,33,61,.08);transform:translateY(-1px)}
+.metric .label{color:var(--muted);font-size:13px}
+.metric .value{font:600 26px/1.2 'Space Grotesk',Inter,sans-serif;margin-top:2px}
+.delta{font-size:13px;margin-top:2px}.delta.pos{color:#1a7f37}.delta.neg{color:#cf222e}.delta.off{color:var(--muted)}
+.plot{width:100%;min-height:320px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);margin:6px 0 12px;padding:4px}
+.tbl{max-height:440px;overflow:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);margin:6px 0 12px}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th{position:sticky;top:0;background:var(--soft);text-align:left;font-weight:600;white-space:nowrap}
+th,td{padding:6px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tbody tr:hover td{background:#F0F4FB}
+.chip{display:inline-block;font-size:12px;background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:2px 10px;margin:2px 6px 6px 0;color:var(--muted)}
+.chip b{color:var(--ink);font-weight:600;margin-right:4px}
+.alert{border-radius:var(--radius);padding:10px 14px;margin:8px 0;border:1px solid}
+.alert p{margin:2px 0}
+.alert.info{background:#EAF1FF;border-color:#BFD2F7}.alert.warning{background:#FFF8E5;border-color:#F0DC9C}
+.alert.success{background:#EAF7EE;border-color:#B7E0C3}.alert.error{background:#FDECEC;border-color:#F3B9B9}
+details.exp{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:8px 14px;margin:8px 0}
+details.exp summary{cursor:pointer;font-weight:600}
+.progress{height:8px;background:var(--soft);border-radius:4px;overflow:hidden;margin:8px 0}.progress span{display:block;height:100%;background:var(--blue)}
+figure.img{margin:6px 0}figure.img img{max-width:100%;border-radius:8px}figure.img figcaption{font-size:12px;color:var(--muted)}
+code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.88em;background:var(--soft);padding:1px 5px;border-radius:4px}
+hr{border:0;border-top:1px solid var(--line);margin:16px 0}
+.muted{color:var(--muted)}
+.ctl{display:inline-flex;align-items:center;gap:8px;margin:2px 14px 10px 0;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.ctl>span{font-weight:600;color:var(--ink)}
+.ctl select{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:5px 28px 5px 10px;cursor:pointer}
+.ctl select:hover,.ctl select:focus{border-color:var(--blue);outline:none}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+.seg button{font:inherit;font-size:12.5px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:4px 11px;border-radius:999px;cursor:pointer;transition:background .15s,border-color .15s}
+.seg button:hover{border-color:var(--blue)}
+.seg button[aria-pressed=true]{background:var(--blue);border-color:var(--blue);color:#fff}
+.ctl.tog{cursor:pointer;color:var(--ink);font-weight:500}
+.ctl.tog input{position:absolute;opacity:0;pointer-events:none}
+.sw{width:32px;height:18px;border-radius:999px;background:#C5CEDF;position:relative;transition:background .15s;flex:none}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.tog input:checked+.sw{background:var(--blue)}.tog input:checked+.sw::after{transform:translateX(14px)}
+.tog input:focus-visible+.sw{outline:2px solid var(--blue);outline-offset:2px}
+.ctl :disabled,.ctl.tog:has(input:disabled){opacity:.45;cursor:not-allowed}
+.dyn.loading{opacity:.55;transition:opacity .1s}
+.seg.many{max-height:92px;overflow:auto;padding:2px;border:1px solid var(--line);border-radius:10px;background:var(--panel);max-width:640px}
+.ctl .hint{font-size:11.5px;color:var(--muted)}
+footer{margin-top:32px;color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@4.1.1/plotly.min.js"></script>
+</head><body><div class="wrap">
+<div class="cm-header"><a class="cm-flag-link" href="#" title="¡Viva Chile!"><img class="cm-flag" width="66" height="44" alt="Flag of Chile" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMDAgMjAwIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI0Q1MkIxRSIvPjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRkZGRkZGIi8+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiMwMDM5QTYiLz48cG9seWdvbiBwb2ludHM9IjUwLjAwLDI1LjAwIDU1LjYxLDQyLjI3IDczLjc4LDQyLjI3IDU5LjA4LDUyLjk1IDY0LjY5LDcwLjIzIDUwLjAwLDU5LjU1IDM1LjMxLDcwLjIzIDQwLjkyLDUyLjk1IDI2LjIyLDQyLjI3IDQ0LjM5LDQyLjI3IiBmaWxsPSIjRkZGRkZGIi8+PC9zdmc+"/></a><div><h1 class="cm-title">Chile <span>Monitor</span></h1>
+<div class="cm-sub"><span class="cm-dot"></span>Public data only · data as of Sun 15 Nov 2026 17:06 NY · 19:06 Santiago</div></div></div>
+<nav class="top"><a href="index.html">Monetary Policy</a><a href="chile-macro.html">Chile Macro</a><a href="curves-rates.html">Curves &amp; Rates</a><a href="fx-flows.html">FX &amp; Flows</a><a href="global-macro.html">Global Macro</a><a href="calendar.html" aria-current=page>Calendar</a><a href="bond-monitor.html">Bond Monitor</a><a href="copper.html">Copper</a><a href="thematic.html">Thematic</a><a href="data-health.html">Data Health</a></nav>
+<div class="cols" style="grid-template-columns:minmax(0,0.833fr) minmax(0,0.167fr)"><div class="col"><h4>Calendar</h4><div class="md"><p><strong>Purpose.</strong> Everything scheduled that can move Chilean rates, with consensus and last surprise.</p></div></div><div class="col"></div></div><div class="md"><p><strong>Planned features</strong></p></div><div class="md"><ul><li>BCCh meetings and IPoM</li><li>INE releases (CPI, labor)</li><li>Hacienda auctions</li><li>US releases and FOMC</li><li>Consensus and last surprise per event</li></ul></div><div class="md"><p><strong>Data sources</strong></p></div><div class="tbl"><table><thead><tr><th>Feature</th><th>Source</th><th>Access</th><th>Key needed</th><th>Frequency / lag</th></tr></thead><tbody><tr><td>BCCh / FOMC meetings</td><td>config/meetings.yaml</td><td>local YAML</td><td>none</td><td>Annual</td></tr><tr><td>INE releases</td><td>INE Chile</td><td>scraping</td><td>none</td><td>Annual / monthly</td></tr><tr><td>Treasury auctions</td><td>Hacienda ODP</td><td>scraping</td><td>none</td><td>Per calendar update</td></tr><tr><td>US release dates</td><td>FRED</td><td>REST (releases)</td><td>FRED_API_KEY</td><td>Ongoing</td></tr></tbody></table></div><div class="alert info"><p><strong>Status:</strong> Not implemented — see <code>docs/specs/</code></p></div>
+<footer>Static snapshot built by the morning job from the Chile Monitor code. Charts are interactive;
+filters show their default settings and Refresh buttons are omitted. Sources and as-of dates are
+under each chart and table.</footer>
+</div><script>
+const LINKS = ["https://www.youtube.com/watch?v=UEqTIwRrWvA&list=RDUEqTIwRrWvA&start_radio=1", "https://www.youtube.com/watch?v=ChKqrwa7Ylw&list=RDChKqrwa7Ylw&start_radio=1", "https://www.youtube.com/watch?v=Dy4pEFFbFsA&list=RDDy4pEFFbFsA&start_radio=1"];
+document.querySelectorAll('.cm-flag-link').forEach(a => a.addEventListener('click', e => {
+  e.preventDefault(); window.open(LINKS[Math.floor(Math.random() * LINKS.length)], '_blank', 'noopener');
+}));
+const FONT = {family: 'Inter, system-ui, sans-serif', color: '#14213D'};
+function drawVisible(root) {
+  root.querySelectorAll('.plot').forEach(div => {
+    if (div.dataset.done || div.offsetParent === null) return;
+    const src = document.querySelector('script[data-for="' + div.id + '"]');
+    const fig = JSON.parse(src.textContent);
+    const layout = Object.assign({}, fig.layout || {});
+    delete layout.width; layout.autosize = true;
+    layout.paper_bgcolor = layout.paper_bgcolor || 'rgba(0,0,0,0)';
+    layout.plot_bgcolor = layout.plot_bgcolor || 'rgba(0,0,0,0)';
+    layout.font = Object.assign({}, FONT, layout.font || {});
+    // Streamlit's chart theme grows the (tight) margins to fit tick labels; do the same here
+    const tpl = Object.assign({}, layout.template || {});
+    tpl.layout = Object.assign({}, tpl.layout || {}, {xaxis: {automargin: true}, yaxis: {automargin: true}});
+    layout.template = tpl;
+    Object.keys(layout).filter(k => /^[xy]axis\d*$/.test(k)).forEach(k => layout[k].automargin = true);
+    const dyn = div.closest('.dyn');
+    const data = (fig.data || []).map(t => dyn ? Object.assign({}, t, {visible: traceVisible(dyn, t.name)}) : t);
+    Plotly.newPlot(div, data, layout, {responsive: true, displaylogo: false});
+    div.dataset.done = '1';
+  });
+}
+document.querySelectorAll('.tablist').forEach(list => {
+  const tabs = [...list.children];
+  const panels = [...list.parentElement.children].filter(c => c.classList.contains('panel'));
+  tabs.forEach((b, i) => b.addEventListener('click', () => {
+    tabs.forEach((t, j) => t.setAttribute('aria-selected', String(i === j)));
+    panels.forEach((p, j) => p.hidden = i !== j);
+    drawVisible(panels[i]);
+  }));
+});
+
+
+// ---- working controls: pre-rendered blocks (server) + trace/row filters (client)
+const variantFiles = {};
+const metaOf = dyn => dyn._meta || (dyn._meta = JSON.parse(dyn.dataset.meta));
+const stateOf = dyn => dyn._state || (dyn._state = JSON.parse(dyn.dataset.state));
+const S = v => JSON.stringify(v);
+function traceVisible(dyn, name) {
+  const meta = metaOf(dyn), st = stateOf(dyn);
+  for (const [k, rule] of Object.entries(meta.controls)) {
+    if (rule.role !== 'client' || rule.kind !== 'traces') continue;
+    const v = st.client[k];
+    if (Array.isArray(rule.match)) {
+      if (!v && rule.match.some(rx => new RegExp(rx).test(name || ''))) return false;
+    } else {
+      for (const [opt, rxs] of Object.entries(rule.match))
+        if (!(v || []).includes(opt) && rxs.some(rx => new RegExp(rx).test(name || ''))) return false;
+    }
+  }
+  return true;
+}
+function applyClient(dyn) {
+  dyn.querySelectorAll('.plot').forEach(div => {
+    if (div.dataset.done && div.data) Plotly.restyle(div, {visible: div.data.map(t => traceVisible(dyn, t.name))});
+  });
+  const meta = metaOf(dyn), st = stateOf(dyn);
+  for (const [k, rule] of Object.entries(meta.controls)) {
+    if (rule.role !== 'client' || rule.kind !== 'rows') continue;
+    const keep = st.client[k] || [];
+    dyn.querySelectorAll('table').forEach(tbl => {
+      const col = [...tbl.querySelectorAll('thead th')].findIndex(th => th.textContent.trim() === rule.column);
+      if (col < 0) return;
+      tbl.querySelectorAll('tbody tr').forEach(tr => {
+        const cell = tr.children[col];
+        tr.hidden = keep.length > 0 && !(cell && keep.includes(cell.textContent.trim()));
+      });
+    });
+  }
+}
+function readCtl(c) {
+  if (c.tagName === 'SELECT') return JSON.parse(c.value);
+  if (c.type === 'checkbox') return c.checked;
+  const on = [...c.querySelectorAll('button[aria-pressed=true]')].map(b => JSON.parse(b.dataset.v));
+  return c.dataset.kind === 'multi' ? on : on[0];
+}
+function writeCtl(c, v) {
+  if (c.tagName === 'SELECT') { c.value = S(v); return; }
+  if (c.type === 'checkbox') { c.checked = !!v; return; }
+  const want = c.dataset.kind === 'multi' ? (v || []).map(S) : [S(v)];
+  c.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(want.includes(b.dataset.v))));
+}
+function syncCtls(dyn) {
+  const st = stateOf(dyn);
+  dyn.querySelectorAll('[data-k]').forEach(c => writeCtl(c, st[c.dataset.role][c.dataset.k]));
+}
+function blockKey(meta, server, dims) {
+  const c = Object.assign({}, server);
+  for (const [k, v, reset] of meta.fix_if) if (S(c[k]) === S(v)) reset.forEach(r => c[r] = meta.defaults[r]);
+  return S(dims.map(d => c[d]));
+}
+async function serverChanged(dyn, key) {
+  const meta = metaOf(dyn), st = stateOf(dyn);
+  const units = Object.entries(meta.units).filter(([, dims]) => dims.includes(key));
+  if (!units.length) return;
+  dyn.classList.add('loading');
+  try {
+    variantFiles[meta.src] = variantFiles[meta.src] || fetch(meta.src).then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+    const all = await variantFiles[meta.src];
+    for (const [u, dims] of units) {
+      const el = dyn.querySelector(':scope > .du[data-u="' + u + '"]');
+      const views = all[u] || {};
+      let html = views[blockKey(meta, st.server, dims)];
+      if (html === undefined) {
+        // e.g. a bond that isn't in the new type filter: take the closest view that keeps the
+        // value just chosen, and adopt its other settings
+        let best = null, score = -1;
+        for (const k of Object.keys(views)) {
+          const vals = JSON.parse(k);
+          if (S(vals[dims.indexOf(key)]) !== S(st.server[key])) continue;
+          const sc = dims.filter((d, i) => S(vals[i]) === S(st.server[d])).length;
+          if (sc > score) { best = vals; score = sc; }
+        }
+        if (best) {
+          dims.forEach((d, i) => st.server[d] = best[i]);
+          html = views[S(best)];
+        }
+      }
+      if (html === undefined) {
+        el.querySelector('.dyn-miss') || el.insertAdjacentHTML('afterbegin',
+          '<div class="alert warning dyn-miss">This combination isn\'t available on the static site; showing the previous view.</div>');
+        continue;
+      }
+      el.innerHTML = html;
+      drawVisible(el);
+    }
+    syncCtls(dyn);
+    applyClient(dyn);
+  } catch (e) {
+    dyn.insertAdjacentHTML('afterbegin', '<div class="alert error">Could not load this view (' + e.message + ').</div>');
+  } finally { dyn.classList.remove('loading'); }
+}
+function onCtl(dyn, c) {
+  const st = stateOf(dyn), k = c.dataset.k, role = c.dataset.role;
+  st[role][k] = readCtl(c);
+  if (role === 'server') serverChanged(dyn, k); else applyClient(dyn);
+}
+document.querySelectorAll('.dyn').forEach(dyn => {
+  syncCtls(dyn);
+  dyn.addEventListener('change', e => {
+    const c = e.target.closest('[data-k]');
+    if (c && (c.tagName === 'SELECT' || c.type === 'checkbox')) onCtl(dyn, c);
+  });
+  dyn.addEventListener('click', e => {
+    const b = e.target.closest('.seg button');
+    if (!b || b.disabled) return;
+    const c = b.closest('[data-k]');
+    if (c.dataset.kind === 'multi') b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
+    else c.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    onCtl(dyn, c);
+  });
+});
+
+drawVisible(document);
+</script></body></html>
