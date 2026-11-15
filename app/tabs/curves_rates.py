@@ -1,36 +1,22 @@
-"""Curves & Rates tab (placeholder)."""
+"""Curves & Rates tab: six sub-tabs (spec 03)."""
 
-from components import SourceRow, TabSpec, placeholder_card
+from __future__ import annotations
 
-SPEC = TabSpec(
-    "Curves & Rates",
-    "Chilean nominal, real and swap curves with changes, carry and spreads to UST.",
-    [
-        "Nominal BCP/BTP and real BCU/BTU curves; breakevens",
-        "SPC curve, nominal and UF",
-        "1d / 1w / 1m changes",
-        "Carry and rolldown",
-        "Spread vs UST",
-    ],
-    [
-        SourceRow(
-            "Bond secondary rates, SPC",
-            "BCCh BDE API",
-            "REST GetSeries",
-            "BCCH_API_TOKEN",
-            "Daily, T-1, transaction-based (gaps)",
-        ),
-        SourceRow(
-            "T-1 SPC and bond rates",
-            "BCCh Informativo Diario",
-            "PDF (pdfplumber)",
-            "none",
-            "Daily, T-1",
-        ),
-        SourceRow("UST yields", "FRED", "REST", "FRED_API_KEY", "Daily"),
-    ],
-)
+import streamlit as st
+
+from tabs import cr_breakevens, cr_carry, cr_quality, cr_shape, cr_snapshot, cr_world
+
+SUBTABS = [
+    ("Curve Snapshot", cr_snapshot),
+    ("Spreads & Shape", cr_shape),
+    ("Breakevens & Real Rates", cr_breakevens),
+    ("Carry & Rolldown", cr_carry),
+    ("Chile vs World", cr_world),
+    ("Data Quality", cr_quality),
+]
 
 
 def render() -> None:
-    placeholder_card(SPEC, key="curves_rates")
+    for tab, (_, module) in zip(st.tabs([t[0] for t in SUBTABS]), SUBTABS, strict=True):
+        with tab:
+            module.render()

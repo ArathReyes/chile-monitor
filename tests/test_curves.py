@@ -318,3 +318,14 @@ def test_realized_vol():
     s = pd.Series([5.0 + 0.01 * (i % 2) for i in range(len(idx))], index=idx)
     assert curves.realized_vol_bp(s, date(2026, 11, 13)) == pytest.approx(1.0, rel=0.05)
     assert curves.realized_vol_bp(s.iloc[:5], date(2026, 11, 13)) is None
+
+
+def test_zero_placeholders_dropped_not_filled():
+    idx = pd.to_datetime(["2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22"])
+    s = pd.Series([2.36, 2.39, 0.0, 2.32], index=idx)
+    assert list(curves.zero_placeholders(s)) == [pd.Timestamp("2026-10-21")]
+    assert len(curves.drop_placeholders(s)) == 3
+    real = pd.Series([0.01, 0.0, -0.02], index=idx[:3])  # genuine near-zero real yields
+    assert curves.zero_placeholders(real).empty
+    panel = curves.curve_panel(pd.DataFrame({"x": s}), [curves.CurvePoint("x", 20.0)])
+    assert pd.Timestamp("2026-10-21") not in panel.index

@@ -40,6 +40,12 @@ TAB_LABELS = [
     "Activity",
     "Labor & External",
     "Surprises & Calendar",
+    "Curve Snapshot",
+    "Spreads & Shape",
+    "Breakevens & Real Rates",
+    "Carry & Rolldown",
+    "Chile vs World",
+    "Data Quality",
 ]
 
 
@@ -148,7 +154,32 @@ def _fill(db: Path) -> None:
     from monitor.jobs.macro_daily import compute_surprises
 
     storage.replace_release_surprises(conn, compute_surprises(conn))
+    _fill_curves(conn)
     conn.close()
+
+
+def _fill_curves(conn) -> None:
+    """Curve points from the registry (shape + noise), then derived spreads and NSS fits."""
+    from monitor.config import load_series
+    from monitor.jobs.curves_daily import compute_derived, compute_fits
+
+    rng = np.random.default_rng(3)
+    cdays = pd.bdate_range("2026-01-02", "2026-11-13")
+    for s in load_series().series:
+        if (
+            not s.curve
+            or s.derived
+            or s.series_id
+            in ("cl_spc_nom_90d", "cl_spc_nom_180d", "cl_spc_nom_360d", "cl_bcu_2y", "cl_bcp_2y")
+        ):
+            continue
+        level = (2.0 if s.curve.startswith("real") else 4.8) + 0.08 * np.log1p(s.tenor_years)
+        vals = level + np.cumsum(rng.normal(0, 0.02, len(cdays)))
+        keep = rng.random(len(cdays)) > (0.3 if s.curve.endswith("bond") else 0.02)
+        df = pd.DataFrame({"series_id": s.series_id, "obs_date": cdays[keep], "value": vals[keep]})
+        storage.upsert_observations(conn, df, "fixture")
+    compute_derived(conn)
+    compute_fits(conn)
 
 
 @pytest.mark.parametrize("filled", [False, True], ids=["empty_db", "fixture_db"])

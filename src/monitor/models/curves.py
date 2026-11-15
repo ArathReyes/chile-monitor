@@ -83,12 +83,32 @@ def to_365(rate: float | pd.Series, basis: int) -> float | pd.Series:
     return rate if basis == TARGET_BASIS else convert_basis(rate, basis, TARGET_BASIS)
 
 
+PLACEHOLDER_GAP = 0.5  # pp
+
+
+def zero_placeholders(s: pd.Series, gap: float = PLACEHOLDER_GAP) -> pd.DatetimeIndex:
+    """Dates of exact-zero prints that sit > `gap` pp from both neighbours on the same side
+    (e.g. BDE SPC UF 20Y = 0.000000 on 2026-10-21 between 2.39 and 2.32). Genuine near-zero
+    rates (real yields in 2019-21) are kept."""
+    s = s.dropna()
+    prev, nxt = s.shift(1), s.shift(-1)
+    bad = (s == 0) & (((prev > gap) & (nxt > gap)) | ((prev < -gap) & (nxt < -gap)))
+    return pd.DatetimeIndex(s.index[bad.to_numpy()])
+
+
+def drop_placeholders(s: pd.Series) -> pd.Series:
+    """Remove zero placeholders (dropped, never replaced)."""
+    s = s.dropna()
+    return s.drop(zero_placeholders(s))
+
+
 def curve_panel(wide: pd.DataFrame, points: Sequence[CurvePoint]) -> pd.DataFrame:
-    """obs_date x tenor_years panel of rates on the 365 basis; NaN where a tenor didn't trade."""
+    """obs_date x tenor_years panel of rates on the 365 basis; NaN where a tenor didn't trade.
+    Zero placeholders are dropped (see zero_placeholders)."""
     cols = {}
     for p in sorted(points, key=lambda p: p.tenor):
         s = wide[p.series_id] if p.series_id in wide.columns else pd.Series(dtype=float)
-        cols[p.tenor] = to_365(s.astype(float), p.basis)
+        cols[p.tenor] = to_365(drop_placeholders(s.astype(float)), p.basis)
     out = pd.DataFrame(cols)
     out.index = pd.DatetimeIndex(out.index, name="obs_date")
     out.columns.name = "tenor"
@@ -210,8 +230,8 @@ def compute_derived(
         a, b = derived_legs(s.source_code)
         if a not in wide.columns or b not in wide.columns:
             continue
-        sa = to_365(wide[a].dropna(), bases.get(a, TARGET_BASIS))
-        sb = to_365(wide[b].dropna(), bases.get(b, TARGET_BASIS))
+        sa = to_365(drop_placeholders(wide[a]), bases.get(a, TARGET_BASIS))
+        sb = to_365(drop_placeholders(wide[b]), bases.get(b, TARGET_BASIS))
         sp = spread_series(sa, sb)
         if sp.empty:
             continue
@@ -607,3 +627,24 @@ def realized_vol_bp(s: pd.Series, end: date, window: str = "3M") -> float | None
     w = in_window(s, end, window)
     d = w.diff().dropna() * 100.0
     return float(d.std()) if len(d) >= 10 else None
+
+
+def curve_deltas(panel: pd.DataFrame, ref: date, horizon: str, factor: float) -> pd.DataFrame:
+    """Per tenor: today vs as-of the horizon, Δ = (now - then) x factor (100 for % -> bp).
+
+    Only tenors observed in both curves (after hiding points older than MAX_AGE_BD).
+    """
+    now = curve_asof(panel, ref).set_index("tenor")
+    then = curve_asof(panel, horizon_target(ref, horizon)).set_index("tenor")
+    common = [t for t in now.index if t in then.index]
+    out = pd.DataFrame(
+        {
+            "tenor": common,
+            "now": [now.loc[t, "value"] for t in common],
+            "now_date": [now.loc[t, "obs_date"] for t in common],
+            "then": [then.loc[t, "value"] for t in common],
+            "then_date": [then.loc[t, "obs_date"] for t in common],
+        }
+    )
+    out["delta_bp"] = (out["now"] - out["then"]) * factor
+    return out

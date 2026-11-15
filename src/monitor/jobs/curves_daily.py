@@ -6,7 +6,9 @@ Usage: uv run python -m monitor.jobs.curves_daily [--full]
 from __future__ import annotations
 
 import argparse
+import json
 import logging
+from datetime import timedelta
 
 import duckdb
 
@@ -31,6 +33,30 @@ def compute_derived(conn: duckdb.DuckDBPyConnection) -> int:
     return storage.upsert_observations(conn, df, "derived")
 
 
+REFIT_DAYS = 10  # re-fit this many days before the last stored fit (late BDE revisions)
+
+
+def compute_fits(conn: duckdb.DuckDBPyConnection, full: bool = False) -> dict[str, int]:
+    """NSS fits for the swap curves, incremental and warm-started from the last stored fit."""
+    specs = [s for s in load_series().series if s.tab == TAB]
+    out = {}
+    for key, cdef in curves.CURVES.items():
+        if not cdef.fit:
+            continue
+        pts = curves.points_from_specs(specs, key)
+        last = None if full else storage.last_curve_fit_date(conn, key)
+        start = last - timedelta(days=REFIT_DAYS) if last else None
+        prev = None
+        if start is not None:
+            hist = storage.read_curve_fits(conn, key)
+            hist = hist[(hist["obs_date"] < str(start)) & hist["params_json"].notna()]
+            prev = json.loads(hist["params_json"].iloc[-1]) if len(hist) else None
+        wide = storage.read_wide(conn, [p.series_id for p in pts], start)
+        panel = curves.curve_panel(wide, pts)
+        out[key] = storage.upsert_curve_fits(conn, curves.fit_history(panel, key, prev=prev))
+    return out
+
+
 def run(full: bool = False) -> dict[str, object]:
     conn = storage.connect()
     try:
@@ -41,6 +67,13 @@ def run(full: bool = False) -> dict[str, object]:
             out["derived"] = r.rows
         except Exception as e:  # noqa: BLE001  (logged to ingest_log)
             out["derived"] = f"error: {e}"
+        try:
+            with storage.ingest_run(conn, "curves_daily.nss_fits", "derived") as r:
+                fits = compute_fits(conn, full)
+                r.rows = sum(fits.values())
+            out["nss_fits"] = fits
+        except Exception as e:  # noqa: BLE001
+            out["nss_fits"] = f"error: {e}"
     finally:
         conn.close()
     return out
