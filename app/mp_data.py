@@ -12,6 +12,7 @@ import pandas as pd
 import streamlit as st
 
 from monitor import storage
+from monitor.cl_calendar import spc_start
 from monitor.config import load_meetings, load_series
 from monitor.health import is_stale
 from monitor.models.prediction_markets import implied_probabilities
@@ -155,7 +156,9 @@ def fit_inputs(as_of: date | None = None, use_2y: bool = False, w2y: float = 0.1
         s = asof_series(sid, as_of)
         if len(s):
             quotes.append(
-                SwapQuote(sid, s.index[-1].date(), float(s.iloc[-1]), 360, tenor_days=days)
+                SwapQuote(
+                    sid, spc_start(s.index[-1].date()), float(s.iloc[-1]), 360, tenor_days=days
+                )
             )
     if use_2y:
         s = asof_series("cl_spc_nom_2y", as_of)
@@ -163,7 +166,7 @@ def fit_inputs(as_of: date | None = None, use_2y: bool = False, w2y: float = 0.1
             quotes.append(
                 SwapQuote(
                     "cl_spc_nom_2y",
-                    s.index[-1].date(),
+                    spc_start(s.index[-1].date()),
                     float(s.iloc[-1]),
                     365,
                     tenor_years=2,
@@ -182,7 +185,11 @@ def fit_inputs(as_of: date | None = None, use_2y: bool = False, w2y: float = 0.1
         quotes=quotes,
         tpm0=float(tpm.iloc[-1]),
         tpm_date=tpm.index[-1].date(),
-        curve_date=max(q.start for q in quotes),
+        curve_date=max(
+            asof_series(sid, as_of).index[-1].date()
+            for sid, _ in SHORT_SWAPS
+            if len(asof_series(sid, as_of))
+        ),
         survey_date=survey_date,
         eof_latest=eof,
         spread_bp=average_spread_bp(tib, tpm),

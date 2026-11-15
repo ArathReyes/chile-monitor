@@ -44,7 +44,7 @@ OUTCOMES_BP = (-50, -25, 0, 25, 50)
 @dataclass(frozen=True)
 class SwapQuote:
     name: str
-    start: date  # first accrual date (curve date + spot lag)
+    start: date  # first accrual date = trade date + 2 CL business days (cl_calendar.spc_start)
     rate: float  # percent, as quoted
     basis: int  # quote day-count basis: 360 or 365
     tenor_days: int | None = None  # single-payment swaps (<= 1y)

@@ -45,3 +45,19 @@ def business_days(start: date, end: date) -> list[date]:
         out.append(d)
         d = next_business_day(d)
     return out
+
+
+def add_business_days(d: date, n: int) -> date:
+    """d plus n Chilean business days (n >= 0); n = 0 returns following(d)."""
+    out = following(d)
+    for _ in range(n):
+        out = next_business_day(out)
+    return out
+
+
+SPC_SPOT_LAG = 2  # Cámara swaps (SPC) settle T+2 (confirmed by the user, 2026-11-15)
+
+
+def spc_start(trade_date: date) -> date:
+    """Accrual start of an SPC traded/quoted on trade_date."""
+    return add_business_days(trade_date, SPC_SPOT_LAG)

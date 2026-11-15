@@ -131,3 +131,10 @@ def test_build_prior_interpolates():
     assert p[0] == pytest.approx(4.75)
     assert 4.75 < p[1] < 5.0
     assert np.all(build_prior(steps, 4.5, None) == 4.5)
+
+
+def test_spc_start_is_t_plus_2_business_days():
+    from monitor.cl_calendar import spc_start
+
+    assert spc_start(date(2026, 11, 13)) == date(2026, 11, 17)  # Fri -> Tue
+    assert spc_start(date(2026, 12, 29)) == date(2027, 1, 4)  # skips 31-Dec bank holiday, 1-Jan

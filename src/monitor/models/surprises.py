@@ -11,7 +11,7 @@ from datetime import date, timedelta
 
 import pandas as pd
 
-from monitor.cl_calendar import previous_business_day
+from monitor.cl_calendar import previous_business_day, spc_start
 from monitor.models.tpm_implied import FitConfig, Step, SwapQuote, fit_path
 
 DECISION_COLUMNS = [
@@ -130,7 +130,7 @@ def market_implied_change(
     s = _as_series(spc90).loc[: pd.Timestamp(decision - timedelta(days=1))]
     if not len(s) or (decision - s.index[-1].date()).days > max_quote_age_days:
         return None
-    q = SwapQuote("spc90", s.index[-1].date(), float(s.iloc[-1]), 360, tenor_days=90)
+    q = SwapQuote("spc90", spc_start(s.index[-1].date()), float(s.iloc[-1]), 360, tenor_days=90)
     fit = fit_path([q], tpm_before, [Step(decision, effective)], cfg=FitConfig(lam=0, mu=0))
     return float(fit.path["change_bp"].iloc[0])
 

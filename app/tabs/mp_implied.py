@@ -251,5 +251,5 @@ def render() -> None:
         st.caption(
             "Model: TPM steps on effective dates (decision + 1 CL business day); overnight = "
             "TPM + spread; Cámara index compounds business-day rates over calendar days, "
-            "ACT/360; swaps start on their quote date (spot lag assumed 0)."
+            "ACT/360; swaps start T+2 CL business days after the quote date."
         )

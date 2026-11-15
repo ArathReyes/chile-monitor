@@ -119,7 +119,7 @@ BDE REST notes: request dates `firstdate`/`lastdate` are `YYYY-MM-DD`; response 
 ## Implied-path model assumptions (models/tpm_implied.py)
 - TPM steps on effective dates = decision + 1 CL business day; overnight = TPM + spread (spread = 20-day average TIB − TPM).
 - Cámara index compounds business-day rates over calendar days, ACT/360. Swaps ≤ 1y: single payment, simple ACT/360. Swaps > 1y: **semiannual coupons, ACT/360** (confirmed by the user 2026-11-14), discounted on the same curve.
-- BDE tenor-table quotes (365 basis) are converted ×360/365; traded 90/180/360d are already 360. Swaps start on their quote date (spot lag 0, assumption).
+- BDE tenor-table quotes (365 basis) are converted ×360/365; traded 90/180/360d are already 360. Swaps settle **T+2** CL business days (`cl_calendar.spc_start`, confirmed by the user 2026-11-15).
 - Defaults: N = 8 steps (known meetings, padded with an unscheduled monthly grid, flagged), λ = 0.005 (EOF prior), μ = 0.25 (smoothness), Kalshi anchor on meeting 1 (weight 4, only when liquid), 2y off by default (flat tail after the last step makes it a weak constraint). With 3 short swaps for 8 unknowns, later meetings lean on prior/smoothness — the UI says so.
 
 ## How to work in this repo
