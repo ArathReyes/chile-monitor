@@ -1,6 +1,6 @@
 # Spec 03 — Curves & Rates tab
 
-Status: **in progress** (2026-11-15). Source: Prompt 4 (user). Reuses the BDE ingestion, the implied TPM path (spec 01) and the UF model (spec 02).
+Status: **implemented** (2026-11-15). Source: Prompt 4 (user). Reuses the BDE ingestion, the implied TPM path (spec 01) and the UF model (spec 02).
 
 ## Decisions taken during implementation (user, 2026-11-15)
 1. **NSS on the swap curves only** (nominal 8 points, real 7). The BDE has only 3 live nominal bond tenors (2/5/10Y) and real bonds often have 3, so bond curves show observed points only. Bond rolldown interpolates linearly between benchmarks (labelled "linear, not NSS"); bond forwards only between observed tenors (2y3y, 5y5y). The short end of the bond curve is never filled with swap rates.
