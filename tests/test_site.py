@@ -5,12 +5,14 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
 
 import export_site as ex  # noqa: E402
+import site_dynamic as sd  # noqa: E402
 
 from monitor import pages, release  # noqa: E402
 
@@ -98,39 +100,85 @@ def test_manual_archive_skips_saved_page_assets(tmp_path: Path):
     assert not (out / "manual" / "board" / "Jane - BCCh_files").exists()
 
 
-def _dyn() -> ex.Dynamic:
-    d = ex.Dynamic(
-        id="t",
-        path=("A", "B"),
-        server=["series", "mode", "window", "grid"],
-        preset={},
-        client=[],
-        fix_if=[("mode", "Deltas", ["window"]), ("grid", True, ["series"])],
+class _W:  # minimal stand-in for an AppTest widget node
+    def __init__(self, type, key, value, options=(), label="L", pmin=""):
+        self.type, self.key, self.value, self.options, self.label = type, key, value, options, label
+        self.proto = SimpleNamespace(min=pmin, disabled=False)
+
+
+def test_jv_matches_javascript_json():
+    from datetime import date
+
+    assert sd.jkey([1000.0, 0.005, True, "√", (date(2026, 1, 2), date(2026, 3, 4))]) == (
+        '[1000,0.005,true,"√",["2026-01-02","2026-03-04"]]'
     )
-    d.defaults = {"series": "Nominal swaps", "mode": "Values", "window": "6M", "grid": False}
-    return d
 
 
-def test_dynamic_collapses_equivalent_combinations():
-    d = _dyn()
-    a = {"series": "Real swaps", "mode": "Deltas", "window": "1Y", "grid": False}
-    b = {"series": "Real swaps", "mode": "Deltas", "window": "2W", "grid": False}
-    assert d.key(a) == d.key(b) == '["Real swaps","Deltas","6M",false]'
-    g = {"series": "Real swaps", "mode": "Values", "window": "1Y", "grid": True}
-    assert d.key(g) == '["Nominal swaps","Values","1Y",true]'
+def test_control_kinds():
+    assert sd.control_for(_W("selectbox", "x", "a", ["a", "b"])).options == ["a", "b"]
+    assert sd.control_for(_W("toggle", "t", False)).options == [False, True]
+    assert sd.control_for(_W("button", "b", False)) is None
+    assert sd.control_for(_W("text_input", "s", "1, 2")) is None  # free text stays fixed
+    big = sd.control_for(_W("selectbox", "x", "a", [str(i) for i in range(sd.MAX_OPTIONS + 1)]))
+    assert big is None
+    m = sd.control_for(_W("multiselect", "m", ["a", "b"], ["a", "b"]))
+    assert m.options == [["a", "b"], ["a"], ["b"]]
+    assert sd.control_for(_W("multiselect", "m", [], [str(i) for i in range(9)])) is None
 
 
-def test_dynamic_key_matches_js_stringify():
-    # JSON.stringify: no spaces, raw unicode, lowercase booleans
-    d = _dyn()
-    d.server = ["series", "grid"]
-    d.fix_if = []
-    assert d.key({"series": "√", "grid": True}) == '["√",true]'
+def test_slider_grid_and_client_controls():
+    c = sd.control_for(_W("slider", "mp_lam", 0.005))
+    assert c.role == "server" and 0.005 in c.options
+    assert sd.control_for(_W("slider", "unlisted", 0.3)) is None
+    h = sd.control_for(_W("multiselect", "cr_h", list(sd.HORIZONS), list(sd.HORIZONS)))
+    assert h.role == "client" and h.rule["kind"] == "traces"
 
 
-def test_registered_sections_exist_in_app_code():
+def test_date_range_presets_include_default():
+    from datetime import date
+
+    today = date(2026, 11, 15)
+    default = (date(2024, 11, 15), date(2026, 11, 12))
+    c = sd.control_for(_W("date_input", "bm_r_d", default, pmin="2021/01/05"), today)
+    assert c.labels == ["Last 1Y", "Last 2Y", "Last 5Y", "All"]
+    assert sd.jkey([c.options[1]]) == sd.jkey([default]) or "Default" in c.labels
+    assert c.options[-1][0] == date(2021, 1, 5)
+
+
+def _section() -> sd.Section:
+    ctl = {
+        k: sd.Control(k, "selectbox", k, opts, [str(o) for o in opts], opts[0], "server")
+        for k, opts in {
+            "cr_series": ["Nominal swaps", "Real swaps"],
+            "cr_mode": ["Values", "Deltas"],
+            "cr_window": ["6M", "1Y", "2W"],
+            "cr_grid": [False, True],
+        }.items()
+    }
+    return sd.Section(("Curves & Rates", "Curve Snapshot"), ctl)
+
+
+def test_section_collapses_equivalent_combinations():
+    s = _section()
+    dims = ["cr_series", "cr_mode", "cr_window", "cr_grid"]
+    a = {"cr_series": "Real swaps", "cr_mode": "Deltas", "cr_window": "1Y", "cr_grid": False}
+    b = dict(a, cr_window="2W")
+    assert s.key(dims, a) == s.key(dims, b) == '["Real swaps","Deltas","6M",false]'
+    g = dict(a, cr_mode="Values", cr_grid=True)
+    assert s.key(dims, g) == '["Nominal swaps","Values","1Y",true]'
+    assert s.id == "curves-rates-curve-snapshot"
+
+
+def test_meta_lists_only_dependent_blocks():
+    s = _section()
+    s.deps = [[], ["cr_series"], []]
+    m = s.meta()
+    assert m["units"] == {"1": ["cr_series"]}
+    assert m["src"] == "dyn-curves-rates-curve-snapshot.json"
+
+
+def test_client_keys_exist_in_app_code():
     app = Path(__file__).resolve().parents[1] / "app" / "tabs"
     code = "".join(p.read_text() for p in app.glob("*.py"))
-    for d in ex.DYNAMIC_LIST:
-        for k in [*d.server, *d.preset, *(r["key"] for r in d.client)]:
-            assert f'key="{k}"' in code, k
+    for k in [*sd.CLIENT, *sd.VALUES, *sd.DATE_RANGES, *(f[0] for f in sd.FIX_IF)]:
+        assert f'key="{k}"' in code or f"key='{k}'" in code, k

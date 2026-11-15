@@ -48,3 +48,4 @@ addopts = "-m 'not live'"
 
 [tool.ruff.lint.per-file-ignores]
 "app/export_site.py" = ["E501"]  # embedded CSS / HTML templates
+"app/site_dynamic.py" = ["E501"]  # embedded JavaScript

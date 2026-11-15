@@ -235,7 +235,7 @@ def build_site(out: Path) -> dict:
         capture_output=True,
         text=True,
         cwd=REPO,
-        timeout=1800,
+        timeout=2700,
         check=False,
     )
     last = (r.stdout.strip().splitlines() or ["{}"])[-1]

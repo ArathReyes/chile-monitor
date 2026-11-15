@@ -125,6 +125,12 @@ def render() -> None:
         "range (nominal 2–10Y, real 2–20Y). '-' allocations count as zero."
     )
     ok = f[f["status"] == "ok"]
+    if ok.empty:
+        st.caption("No completed auctions in this selection.")
+        job_caption(
+            ["hacienda.results"], "Hacienda ODP (live page + consolidated files); curves: BCCh BDE"
+        )
+        return
     a, b = st.columns(2)
     fig = go.Figure()
     for t in ("Letra", "BTP", "BTU"):
