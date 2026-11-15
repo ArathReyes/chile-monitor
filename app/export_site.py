@@ -18,6 +18,7 @@ import json
 import re
 import sys
 import time
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -186,6 +187,9 @@ class Renderer:
     def __init__(self) -> None:
         self.n_plots = 0
         self.unknown: dict[str, int] = {}
+        self.path: list[str] = []
+        self.placeholders = True  # dynamic sections → placeholder (filled after the variant runs)
+        self.dyn: Dynamic | None = None  # set while rendering a variant: its widgets go live
 
     def children(self, node) -> str:
         return "".join(self.node(c) for c in getattr(node, "children", {}).values())
@@ -260,6 +264,9 @@ class Renderer:
         return self.children(n)
 
     def widget(self, n) -> str:
+        key = getattr(n, "key", None)
+        if self.dyn is not None and key in self.dyn.live_keys:
+            return self.live(n, "server" if key in self.dyn.server else "client")
         v = getattr(n, "value", None)
         if isinstance(v, list | tuple):
             v = ", ".join(_fmt_cell(x) if not isinstance(x, str) else x for x in v) or "all"
@@ -275,6 +282,36 @@ class Renderer:
             f"{html.escape(str(v))}</span>"
         )
 
+    def live(self, n, role: str) -> str:
+        """A working control. 'server' controls pick a pre-rendered variant; 'client' controls
+        show/hide chart traces in the browser."""
+        t, key, label = n.type, n.key, _inline(n.label or "", False)
+        dis = " disabled" if getattr(n.proto, "disabled", False) else ""
+        attrs = f'data-k="{html.escape(key)}" data-role="{role}"'
+        if t == "toggle" or t == "checkbox":
+            chk = " checked" if self.dyn.initial(key, n.value) else ""
+            return (
+                f'<label class="ctl tog"><input type="checkbox" {attrs}{chk}{dis}>'
+                f'<span class="sw"></span>{label}</label>'
+            )
+        multi = t == "multiselect"
+        cur = self.dyn.initial(key, n.value)
+        sel = set(cur) if multi else {cur}
+        if t == "selectbox":
+            opts = "".join(
+                f'<option value="{html.escape(json.dumps(o, ensure_ascii=False))}"'
+                f"{' selected' if o in sel else ''}>{html.escape(str(o))}</option>"
+                for o in n.options
+            )
+            return f'<label class="ctl"><span>{label}</span><select {attrs}{dis}>{opts}</select></label>'
+        btns = "".join(
+            f'<button type="button" data-v="{html.escape(json.dumps(o, ensure_ascii=False))}" '
+            f'aria-pressed="{str(o in sel).lower()}"{dis}>{html.escape(str(o))}</button>'
+            for o in n.options
+        )
+        kind = "multi" if multi else "one"
+        return f'<div class="ctl"><span>{label}</span><div class="seg" {attrs} data-kind="{kind}">{btns}</div></div>'
+
     def tabs(self, n) -> str:
         kids = [k for k in n.children.values() if getattr(k, "type", "") == "tab"]
         btns = "".join(
@@ -282,10 +319,20 @@ class Renderer:
             for i, k in enumerate(kids)
         )
         panels = "".join(
-            f'<div class="panel"{"" if i == 0 else " hidden"}>{self.children(k)}</div>'
+            f'<div class="panel"{"" if i == 0 else " hidden"}>{self.panel(k)}</div>'
             for i, k in enumerate(kids)
         )
         return f'<div class="tabs"><div class="tablist" role="tablist">{btns}</div>{panels}</div>'
+
+    def panel(self, tab) -> str:
+        self.path.append(tab.label)
+        try:
+            d = DYNAMIC.get(tuple(self.path))
+            if d is not None and self.placeholders:
+                return f"<!--DYN:{d.id}-->"
+            return self.children(tab)
+        finally:
+            self.path.pop()
 
     def plot(self, p) -> str:
         self.n_plots += 1
@@ -319,6 +366,138 @@ WIDGETS = {
     "number_input", "date_input", "text_input", "text_area", "time_input", "color_picker",
     "segmented_control", "pills", "button_group",
 }  # fmt: skip
+
+
+# ------------------------------------------------------------------ dynamic sections
+# A sub-tab whose controls keep working on the static page. "server" widgets are re-run with
+# the real code for every combination (pre-rendered variants, fetched on first change);
+# "client" widgets only show/hide chart traces in the browser, so every variant is rendered
+# with them fully on ("preset") and the page hides what the viewer turned off.
+
+
+@dataclass
+class Dynamic:
+    id: str
+    path: tuple[str, ...]
+    server: list[str]
+    preset: dict[str, object]
+    client: list[dict]  # {"key", "kind": "multi"|"toggle", "match": {opt: [regex]} | [regex]}
+    fix_if: list[tuple[str, object, list[str]]] = field(default_factory=list)
+    options: dict[str, list] = field(default_factory=dict)
+    defaults: dict[str, object] = field(default_factory=dict)
+    client_defaults: dict[str, object] = field(default_factory=dict)
+
+    @property
+    def live_keys(self) -> set[str]:
+        return set(self.server) | {r["key"] for r in self.client}
+
+    def initial(self, key: str, rendered):
+        return self.client_defaults.get(key, rendered)
+
+    def normalize(self, combo: dict) -> dict:
+        """Collapse combinations whose output is identical (e.g. the window in Deltas mode)."""
+        c = dict(combo)
+        for k, v, reset in self.fix_if:
+            if c[k] == v:
+                for r in reset:
+                    c[r] = self.defaults[r]
+        return c
+
+    def key(self, combo: dict) -> str:
+        c = self.normalize(combo)
+        return json.dumps([c[k] for k in self.server], ensure_ascii=False, separators=(",", ":"))
+
+    def meta(self) -> dict:
+        return {
+            "src": f"dyn-{self.id}.json",
+            "order": self.server,
+            "defaults": self.defaults,
+            "fix_if": self.fix_if,
+            "client": self.client,
+        }
+
+
+_HORIZONS = ("1D", "1W", "1M", "3M", "1Y")
+DYNAMIC_LIST = [
+    Dynamic(
+        id="cr_snapshot",
+        path=("Curves & Rates", "Curve Snapshot"),
+        server=["cr_series", "cr_mode", "cr_window", "cr_scale", "cr_grid"],
+        preset={"cr_fit": True, "cr_model": True, "cr_h": list(_HORIZONS)},
+        client=[
+            {"key": "cr_h", "kind": "multi",
+             "match": {h: [f"^{h} \\(", f"^Δ {h}$"] for h in _HORIZONS}},
+            {"key": "cr_fit", "kind": "toggle", "match": ["^NSS fit$"]},
+            {"key": "cr_model", "kind": "toggle", "match": ["^Model$"]},
+        ],
+        fix_if=[("cr_mode", "Deltas", ["cr_window"]), ("cr_grid", True, ["cr_series"])],
+    ),
+]  # fmt: skip
+DYNAMIC = {d.path: d for d in DYNAMIC_LIST}
+MAX_VARIANTS = 400
+
+
+def _widget(tree, key: str):
+    return next((n for n in _walk(tree) if getattr(n, "key", None) == key), None)
+
+
+def _find_tab(tree, path: tuple[str, ...]):
+    node = tree
+    for label in path:
+        node = next(
+            (n for n in _walk(node) if getattr(n, "type", "") == "tab" and n.label == label), None
+        )
+        if node is None:
+            return None
+    return node
+
+
+def prepare(d: Dynamic, tree) -> None:
+    """Options and defaults from the base run (the page's initial state)."""
+    for k in d.server:
+        w = _widget(tree, k)
+        if w is None:
+            raise RuntimeError(f"dynamic section {d.id}: widget {k!r} not found")
+        d.options[k] = [False, True] if w.type in ("toggle", "checkbox") else list(w.options)
+        d.defaults[k] = w.value
+    for r in d.client:
+        w = _widget(tree, r["key"])
+        d.client_defaults[r["key"]] = w.value if w is not None else None
+
+
+def run_variants(at, d: Dynamic, r: Renderer) -> dict[str, str]:
+    import itertools
+
+    combos = {}
+    for vals in itertools.product(*(d.options[k] for k in d.server)):
+        c = d.normalize(dict(zip(d.server, vals, strict=True)))
+        combos[d.key(c)] = c
+    if len(combos) > MAX_VARIANTS:
+        raise RuntimeError(f"{d.id}: {len(combos)} variants > {MAX_VARIANTS}")
+    out = {}
+    r.placeholders, r.dyn = False, d
+    try:
+        for key, c in combos.items():
+            for k, v in {**c, **d.preset}.items():
+                at.session_state[k] = v
+            at.run()
+            if at.exception:
+                raise RuntimeError(f"{d.id} {key}: {at.exception[0].value}")
+            node = _find_tab(at._tree, d.path)
+            out[key] = r.children(node)
+    finally:
+        r.placeholders, r.dyn = True, None
+    return out
+
+
+def dyn_wrapper(d: Dynamic, html_: str) -> str:
+    state = {
+        "server": {k: d.defaults[k] for k in d.server},
+        "client": d.client_defaults,
+    }
+    meta = html.escape(json.dumps(d.meta(), ensure_ascii=False), quote=True)
+    st_ = html.escape(json.dumps(state, ensure_ascii=False), quote=True)
+    return f'<div class="dyn" data-meta="{meta}" data-state="{st_}">{html_}</div>'
 
 
 # ------------------------------------------------------------------ page
@@ -379,6 +558,22 @@ figure.img{margin:6px 0}figure.img img{max-width:100%;border-radius:8px}figure.i
 code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.88em;background:var(--soft);padding:1px 5px;border-radius:4px}
 hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 .muted{color:var(--muted)}
+.ctl{display:inline-flex;align-items:center;gap:8px;margin:2px 14px 10px 0;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.ctl>span{font-weight:600;color:var(--ink)}
+.ctl select{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:5px 28px 5px 10px;cursor:pointer}
+.ctl select:hover,.ctl select:focus{border-color:var(--blue);outline:none}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+.seg button{font:inherit;font-size:12.5px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:4px 11px;border-radius:999px;cursor:pointer;transition:background .15s,border-color .15s}
+.seg button:hover{border-color:var(--blue)}
+.seg button[aria-pressed=true]{background:var(--blue);border-color:var(--blue);color:#fff}
+.ctl.tog{cursor:pointer;color:var(--ink);font-weight:500}
+.ctl.tog input{position:absolute;opacity:0;pointer-events:none}
+.sw{width:32px;height:18px;border-radius:999px;background:#C5CEDF;position:relative;transition:background .15s;flex:none}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.tog input:checked+.sw{background:var(--blue)}.tog input:checked+.sw::after{transform:translateX(14px)}
+.tog input:focus-visible+.sw{outline:2px solid var(--blue);outline-offset:2px}
+.ctl :disabled,.ctl.tog:has(input:disabled){opacity:.45;cursor:not-allowed}
+.dyn.loading{opacity:.55;transition:opacity .1s}
 footer{margin-top:32px;color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:12px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 """
@@ -404,7 +599,9 @@ function drawVisible(root) {
     tpl.layout = Object.assign({}, tpl.layout || {}, {xaxis: {automargin: true}, yaxis: {automargin: true}});
     layout.template = tpl;
     Object.keys(layout).filter(k => /^[xy]axis\\d*$/.test(k)).forEach(k => layout[k].automargin = true);
-    Plotly.newPlot(div, fig.data || [], layout, {responsive: true, displaylogo: false});
+    const dyn = div.closest('.dyn');
+    const data = (fig.data || []).map(t => dyn ? Object.assign({}, t, {visible: traceVisible(dyn, t.name)}) : t);
+    Plotly.newPlot(div, data, layout, {responsive: true, displaylogo: false});
     div.dataset.done = '1';
   });
 }
@@ -417,6 +614,79 @@ document.querySelectorAll('.tablist').forEach(list => {
     drawVisible(panels[i]);
   }));
 });
+
+// ---- dynamic sections: pre-rendered variants (server controls) + trace toggles (client)
+const META = el => JSON.parse(el.dataset.meta);
+const variantCache = {};
+function traceVisible(dyn, name) {
+  const st = dyn._state || JSON.parse(dyn.dataset.state);
+  for (const rule of META(dyn).client) {
+    const v = st.client[rule.key];
+    if (rule.kind === 'toggle') {
+      if (!v && rule.match.some(rx => new RegExp(rx).test(name || ''))) return false;
+    } else {
+      for (const [opt, rxs] of Object.entries(rule.match))
+        if (!(v || []).includes(opt) && rxs.some(rx => new RegExp(rx).test(name || ''))) return false;
+    }
+  }
+  return true;
+}
+function applyClient(dyn) {
+  dyn.querySelectorAll('.plot').forEach(div => {
+    if (!div.dataset.done || !div.data) return;
+    Plotly.restyle(div, {visible: div.data.map(t => traceVisible(dyn, t.name))});
+  });
+}
+function readCtl(c) {
+  if (c.tagName === 'SELECT') return JSON.parse(c.value);
+  if (c.type === 'checkbox') return c.checked;
+  const on = [...c.querySelectorAll('button[aria-pressed=true]')].map(b => JSON.parse(b.dataset.v));
+  return c.dataset.kind === 'multi' ? on : on[0];
+}
+function writeCtl(c, v) {
+  if (c.tagName === 'SELECT') { c.value = JSON.stringify(v); return; }
+  if (c.type === 'checkbox') { c.checked = !!v; return; }
+  const set = c.dataset.kind === 'multi' ? (v || []).map(x => JSON.stringify(x)) : [JSON.stringify(v)];
+  c.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(set.includes(b.dataset.v))));
+}
+function variantKey(meta, server) {
+  const c = Object.assign({}, server);
+  for (const [k, v, reset] of meta.fix_if) if (JSON.stringify(c[k]) === JSON.stringify(v)) reset.forEach(r => c[r] = meta.defaults[r]);
+  return JSON.stringify(meta.order.map(k => c[k]));
+}
+async function swap(dyn) {
+  const meta = META(dyn);
+  dyn.classList.add('loading');
+  try {
+    variantCache[meta.src] = variantCache[meta.src] || fetch(meta.src).then(r => r.json());
+    const html = (await variantCache[meta.src])[variantKey(meta, dyn._state.server)];
+    if (html === undefined) throw new Error('no pre-rendered view for this combination');
+    dyn.innerHTML = html;
+    bindDyn(dyn);
+    drawVisible(dyn);
+  } catch (e) {
+    alert('Could not load this view: ' + e.message);
+  } finally { dyn.classList.remove('loading'); }
+}
+function bindDyn(dyn) {
+  dyn._state = dyn._state || JSON.parse(dyn.dataset.state);
+  dyn.querySelectorAll('[data-k]').forEach(c => {
+    const k = c.dataset.k, role = c.dataset.role;
+    writeCtl(c, dyn._state[role][k]);
+    const changed = () => {
+      dyn._state[role][k] = readCtl(c);
+      if (role === 'server') swap(dyn); else applyClient(dyn);
+    };
+    if (c.tagName === 'SELECT' || c.type === 'checkbox') c.addEventListener('change', changed);
+    else c.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      if (b.disabled) return;
+      if (c.dataset.kind === 'multi') b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
+      else c.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+      changed();
+    }));
+  });
+}
+document.querySelectorAll('.dyn').forEach(bindDyn);
 drawVisible(document);
 """
 
@@ -470,20 +740,35 @@ def build(out: Path, timeout: float = 900) -> dict[str, object]:
     built = datetime.now(NY)
     out.mkdir(parents=True, exist_ok=True)
     r = Renderer()
-    sizes = {}
+    for d in DYNAMIC_LIST:
+        prepare(d, at._tree)
+    docs = {}
     for i, (k, fname) in enumerate(zip(tabs, files, strict=True)):
         nav = "".join(
             f'<a href="{f}"{" aria-current=page" if j == i else ""}>{html.escape(t.label)}</a>'
             for j, (t, f) in enumerate(zip(tabs, files, strict=True))
         )
-        doc = page(k.label, nav, r.children(k), built)
+        r.path = [k.label]
+        docs[fname] = page(k.label, nav, r.children(k), built)
+        r.path = []
+    n_variants = 0
+    for d in DYNAMIC_LIST:  # reruns change the app state: after every page is rendered
+        variants = run_variants(at, d, r)
+        n_variants += len(variants)
+        (out / f"dyn-{d.id}.json").write_text(
+            json.dumps(variants, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
+        )
+        default = variants[d.key(d.defaults)]
+        for fname, doc in docs.items():
+            docs[fname] = doc.replace(f"<!--DYN:{d.id}-->", dyn_wrapper(d, default))
+    for fname, doc in docs.items():
         (out / fname).write_text(doc, encoding="utf-8")
-        sizes[fname] = len(doc)
     (out / ".nojekyll").write_text("")
     return {
         "pages": len(files),
         "plots": r.n_plots,
-        "bytes": sum(sizes.values()),
+        "variants": n_variants,
+        "bytes": sum(len(d) for d in docs.values()),
         "app_exceptions": errors,
         "unknown_elements": r.unknown,
         "seconds": round(time.monotonic() - t0, 1),

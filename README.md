@@ -81,7 +81,9 @@ GitHub Actions, Mon–Fri 05:05 New York (.github/workflows/morning.yml)
 - **Static pages from the real code.** `app/export_site.py` runs `app/main.py` with Streamlit's
   AppTest and converts what it draws (metrics, tables, captions, Plotly figures, sub-tabs,
   expanders, images) to HTML: one page per tab, sub-tabs switch in the browser, charts keep
-  hover and zoom. Refresh buttons are dropped; filters/pickers show their default value as a chip.
+  hover and zoom. Refresh buttons are dropped; filters/pickers show their default value as a chip,
+  except in sub-tabs registered in `DYNAMIC_LIST` (Curve Snapshot): there the controls work, either
+  by switching between versions pre-rendered with the real code or by hiding chart lines.
   Build it locally: `uv run python app/export_site.py --out site` and open `site/index.html`.
 - **Schedule:** GitHub cron is UTC without DST, so it fires at 09:05 and 10:05 UTC and
   `--at-ny-hour 5` keeps only the one that is 05:xx in New York; a second run the same NY day is

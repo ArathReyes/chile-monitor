@@ -96,3 +96,41 @@ def test_manual_archive_skips_saved_page_assets(tmp_path: Path):
     assert (out / "manual" / "board" / "Jane - BCCh.html").read_text() == "profile"
     assert (out / "manual" / "board" / "Board-Pictures" / "jane.jpg").exists()
     assert not (out / "manual" / "board" / "Jane - BCCh_files").exists()
+
+
+def _dyn() -> ex.Dynamic:
+    d = ex.Dynamic(
+        id="t",
+        path=("A", "B"),
+        server=["series", "mode", "window", "grid"],
+        preset={},
+        client=[],
+        fix_if=[("mode", "Deltas", ["window"]), ("grid", True, ["series"])],
+    )
+    d.defaults = {"series": "Nominal swaps", "mode": "Values", "window": "6M", "grid": False}
+    return d
+
+
+def test_dynamic_collapses_equivalent_combinations():
+    d = _dyn()
+    a = {"series": "Real swaps", "mode": "Deltas", "window": "1Y", "grid": False}
+    b = {"series": "Real swaps", "mode": "Deltas", "window": "2W", "grid": False}
+    assert d.key(a) == d.key(b) == '["Real swaps","Deltas","6M",false]'
+    g = {"series": "Real swaps", "mode": "Values", "window": "1Y", "grid": True}
+    assert d.key(g) == '["Nominal swaps","Values","1Y",true]'
+
+
+def test_dynamic_key_matches_js_stringify():
+    # JSON.stringify: no spaces, raw unicode, lowercase booleans
+    d = _dyn()
+    d.server = ["series", "grid"]
+    d.fix_if = []
+    assert d.key({"series": "√", "grid": True}) == '["√",true]'
+
+
+def test_registered_sections_exist_in_app_code():
+    app = Path(__file__).resolve().parents[1] / "app" / "tabs"
+    code = "".join(p.read_text() for p in app.glob("*.py"))
+    for d in ex.DYNAMIC_LIST:
+        for k in [*d.server, *d.preset, *(r["key"] for r in d.client)]:
+            assert f'key="{k}"' in code, k
