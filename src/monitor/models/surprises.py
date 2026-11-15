@@ -14,6 +14,10 @@ import pandas as pd
 from monitor.cl_calendar import previous_business_day
 from monitor.models.tpm_implied import FitConfig, Step, SwapQuote, fit_path
 
+DECISION_COLUMNS = [
+    "decision_date", "effective_date", "meeting_id", "tpm_before", "tpm_after", "change_bp",
+    "from_meetings",
+]  # fmt: skip
 HIT_THRESHOLD_BP = 12.5
 EOF_MAX_AGE_DAYS = 45  # EOF round must be within this window before the decision
 EEE_PUBLICATION_LAG_DAYS = 12  # EEE dated 1st of month, published ~10th-12th
@@ -33,6 +37,8 @@ def _value_on_or_before(s: pd.Series, d: date) -> float | None:
 def decisions_from_tpm(tpm: pd.Series) -> pd.DataFrame:
     """Rate changes in the daily TPM series."""
     s = _as_series(tpm)
+    if s.empty:
+        return pd.DataFrame(columns=DECISION_COLUMNS)
     chg = s.diff()
     rows = []
     for ts, d in chg[chg.fillna(0) != 0].items():
@@ -49,7 +55,7 @@ def decisions_from_tpm(tpm: pd.Series) -> pd.DataFrame:
                 "from_meetings": False,
             }
         )
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=DECISION_COLUMNS)
 
 
 def decisions_from_meetings(
@@ -76,7 +82,7 @@ def decisions_from_meetings(
                 "from_meetings": True,
             }
         )
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=DECISION_COLUMNS)
 
 
 def survey_expectation(
