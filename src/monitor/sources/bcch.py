@@ -8,6 +8,7 @@ Docs: https://si3.bcentral.cl/estadisticas/Principal1/Web_Services/documentacion
 from __future__ import annotations
 
 import json
+import logging
 from datetime import date, timedelta
 from typing import Any, Literal
 
@@ -19,6 +20,9 @@ from monitor.sources.base import HealthResult, Source
 
 Frequency = Literal["DAILY", "MONTHLY", "QUARTERLY", "ANNUAL"]
 HEALTH_SERIES = "F022.TPM.TIN.D001.NO.Z.D"  # TPM; code from the official docs example
+MIN_OBS_DATE = date(1950, 1, 1)  # older dates are BDE placeholders (seen: 31-12-1899, value 0)
+
+log = logging.getLogger(__name__)
 
 
 class BcchApiError(RuntimeError):
@@ -40,8 +44,19 @@ def parse_get_series(payload: dict[str, Any]) -> pd.DataFrame:
     rows = []
     for obs in series["Obs"] or []:
         value = parse_bde_value(obs.get("value"))
-        if value is not None:
-            rows.append((parse_bde_date(obs["indexDateString"]), value))
+        if value is None:
+            continue
+        d = parse_bde_date(obs["indexDateString"])
+        if d < MIN_OBS_DATE:
+            # BDE placeholder rows (e.g. 31-12-1899, value 0): drop, but keep the series.
+            log.warning(
+                "BDE %s: dropped observation dated %s (before %s)",
+                series.get("seriesId", "?"),
+                d,
+                MIN_OBS_DATE,
+            )
+            continue
+        rows.append((d, value))
     return pd.DataFrame(rows, columns=["obs_date", "value"])
 
 

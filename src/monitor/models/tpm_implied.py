@@ -25,6 +25,7 @@ with residuals in basis points (x_0 = current TPM). After the last step the TPM 
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 
@@ -36,6 +37,12 @@ from scipy.optimize import least_squares
 from monitor.cl_calendar import following, next_business_day
 
 OUTCOMES_BP = (-50, -25, 0, 25, 50)
+# EOF keys answered by meeting position (0 = next meeting after the survey) and by horizon (days).
+EOF_MEETING_KEYS = ("next", "rpm1", "rpm2_3m", "rpm3", "rpm4_6m")
+EOF_HORIZON_KEYS = ((365, "12m"), (730, "24m"))
+EOF_KEYS = (*EOF_MEETING_KEYS, *(k for _, k in EOF_HORIZON_KEYS))
+
+Meeting = tuple[date, date, str]  # (decision, effective, id)
 
 
 # --------------------------------------------------------------------------- inputs
@@ -92,7 +99,7 @@ class Anchor:
 @dataclass(frozen=True)
 class FitConfig:
     lam: float = 0.005  # prior weight (per bp^2, relative to swap weight 1)
-    mu: float = 0.25  # smoothness weight
+    mu: float = 0.05  # smoothness weight (was 0.25; see docs/backtests/01-implied-path.md)
     spread_bp: float = 0.0  # overnight Cámara - TPM spread
     lower: float = 0.0
     upper: float = 25.0
@@ -352,6 +359,64 @@ def build_prior(
     ys = np.array([p[1] for p in pts])
     t = np.array([(s.effective_date - survey_date).days for s in steps], dtype=float)
     return np.interp(t, xs, ys)
+
+
+@dataclass(frozen=True)
+class EofRound:
+    """One EOF survey round: survey date and the answers given in that round only."""
+
+    survey_date: date
+    values: dict[str, float]
+
+
+def latest_eof_round(eof: Mapping[str, pd.Series], cutoff: date) -> EofRound | None:
+    """Latest EOF round dated <= cutoff, with every key taken from that same survey date.
+
+    eof: {key: series indexed by survey date} for keys in EOF_KEYS ("next", ..., "12m", "24m").
+    The round date is the latest date of any meeting-position key; keys with no answer on that
+    date are left out (never filled from an older round).
+    """
+    ts_cut = pd.Timestamp(cutoff)
+    clean = {k: s.dropna().sort_index() for k, s in eof.items() if k in EOF_KEYS}
+    dates = [
+        sub.index[-1] for k in EOF_MEETING_KEYS if k in clean and len(sub := clean[k].loc[:ts_cut])
+    ]
+    if not dates:
+        return None
+    sd = max(dates)
+    values = {k: float(s.loc[sd]) for k, s in clean.items() if sd in s.index}
+    return EofRound(sd.date(), {k: values[k] for k in EOF_KEYS if k in values})
+
+
+def meetings_between(meetings: Sequence[Meeting], after: date, before: date) -> int:
+    """Number of meetings with after < decision < before."""
+    return sum(1 for dec, _, _ in meetings if after < dec < before)
+
+
+def eof_prior(
+    steps: list[Step],
+    tpm0: float,
+    rnd: EofRound | None,
+    meetings: Sequence[Meeting],
+    align: bool = True,
+) -> np.ndarray:
+    """EOF prior: meeting keys by position, 12m/24m by days after the survey.
+
+    The round's positions count meetings after its survey date. Meetings held between the survey
+    and steps[0] are already past, so positions shift by that count (one meeting held since the
+    round: its 'rpm1' maps to steps[0] and its 'next' is dropped). align=False keeps the unshifted
+    mapping (used only by the backtest to measure the old behaviour).
+    """
+    if rnd is None:
+        return build_prior(steps, tpm0, None)
+    held = meetings_between(meetings, rnd.survey_date, steps[0].decision_date) if align else 0
+    pts = {
+        i - held: rnd.values[k]
+        for i, k in enumerate(EOF_MEETING_KEYS)
+        if k in rnd.values and i >= held
+    }
+    hz = {d: rnd.values[k] for d, k in EOF_HORIZON_KEYS if k in rnd.values}
+    return build_prior(steps, tpm0, rnd.survey_date, pts, hz)
 
 
 def average_spread_bp(tib: pd.Series, tpm: pd.Series, window: int = 20) -> float:

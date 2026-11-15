@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from monitor.cl_calendar import business_days, following, next_business_day
@@ -14,6 +15,7 @@ from monitor.models.tpm_implied import (
     change_probabilities,
     convert_basis,
     fit_path,
+    latest_eof_round,
     model_rates,
 )
 
@@ -138,3 +140,21 @@ def test_spc_start_is_t_plus_2_business_days():
 
     assert spc_start(date(2026, 11, 13)) == date(2026, 11, 17)  # Fri -> Tue
     assert spc_start(date(2026, 12, 29)) == date(2027, 1, 4)  # skips 31-Dec bank holiday, 1-Jan
+
+
+def test_latest_eof_round_takes_every_key_from_one_survey_date():
+    idx = pd.to_datetime(["2026-10-01", "2026-10-15"])
+    eof = {
+        "next": pd.Series([4.75, 4.5], index=idx),
+        "rpm1": pd.Series([4.5, np.nan], index=idx),  # missing in the latest round
+        "12m": pd.Series([4.25], index=idx[:1]),  # only answered in the older round
+        "24m": pd.Series([4.0, 4.0], index=idx),
+    }
+    rnd = latest_eof_round(eof, date(2026, 11, 13))
+    assert rnd.survey_date == date(2026, 10, 15)
+    assert rnd.values == {"next": 4.5, "24m": 4.0}  # no rpm1 / 12m from the older round
+    old = latest_eof_round(eof, date(2026, 10, 14))
+    assert old.survey_date == date(2026, 10, 1)
+    assert old.values == {"next": 4.75, "rpm1": 4.5, "12m": 4.25, "24m": 4.0}
+    assert latest_eof_round(eof, date(2026, 9, 1)) is None
+    assert latest_eof_round({}, date(2026, 11, 13)) is None

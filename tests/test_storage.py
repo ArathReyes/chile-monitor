@@ -65,6 +65,23 @@ def test_upsert_and_vintages(conn):
     assert len(hist) == 4
 
 
+def test_delete_invalid_observations_keeps_history(conn):
+    storage.upsert_observations(
+        conn,
+        _obs(
+            ("cl_spc_nom_90d", date(1899, 12, 31), 0.0),
+            ("cl_spc_nom_90d", date(2026, 11, 13), 4.32),
+            ("cl_tpm", date(2026, 11, 13), 4.25),
+        ),
+        "bcch",
+    )
+    assert storage.delete_invalid_observations(conn) == 1
+    assert storage.read_series(conn, "cl_spc_nom_90d")["value"].tolist() == [4.32]
+    assert storage.read_series(conn, "cl_tpm")["value"].tolist() == [4.25]
+    assert len(storage.read_vintages(conn, "cl_spc_nom_90d")) == 2  # vintages untouched
+    assert storage.delete_invalid_observations(conn) == 0
+
+
 def test_upsert_rejects_nulls_and_dupes(conn):
     with pytest.raises(ValueError, match="nulls"):
         storage.upsert_observations(conn, _obs(("x", date(2026, 1, 1), None)), "s")

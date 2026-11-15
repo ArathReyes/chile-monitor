@@ -22,21 +22,23 @@ from monitor.models.surprises import (
     surprise_table,
 )
 from monitor.models.tpm_implied import (
+    EOF_KEYS,
     Anchor,
+    EofRound,
     FitConfig,
     PathFit,
     SwapQuote,
     average_spread_bp,
-    build_prior,
     build_steps,
+    eof_prior,
     fit_path,
+    latest_eof_round,
 )
 
 TTL = 600
 N_STEPS = 8
 SHORT_SWAPS = [("cl_spc_nom_90d", 90), ("cl_spc_nom_180d", 180), ("cl_spc_nom_360d", 360)]
-EOF_MEETING_KEYS = ["next", "rpm1", "rpm2_3m", "rpm3", "rpm4_6m"]
-EOF_IDS = [f"eof_tpm_{k}" for k in [*EOF_MEETING_KEYS, "12m", "24m"]]
+EOF_IDS = [f"eof_tpm_{k}" for k in EOF_KEYS]
 EEE_HORIZONS = {"this_month": 0, "next_month": 1, "5m": 5, "11m": 11, "17m": 17, "23m": 23}
 EEE_IDS = [f"eee_tpm_{k}" for k in EEE_HORIZONS]
 
@@ -143,9 +145,16 @@ class FitInputs:
     tpm0: float
     tpm_date: date
     curve_date: date
-    survey_date: date | None
-    eof_latest: dict[str, float]
+    eof_round: EofRound | None  # latest EOF round, every key from that one survey date
     spread_bp: float
+
+    @property
+    def survey_date(self) -> date | None:
+        return self.eof_round.survey_date if self.eof_round else None
+
+    @property
+    def eof_latest(self) -> dict[str, float]:
+        return self.eof_round.values if self.eof_round else {}
 
 
 def fit_inputs(as_of: date | None = None, use_2y: bool = False, w2y: float = 0.1) -> FitInputs:
@@ -173,13 +182,8 @@ def fit_inputs(as_of: date | None = None, use_2y: bool = False, w2y: float = 0.1
                     weight=w2y,
                 )
             )
-    eof = {}
-    survey_date = None
-    for k in [*EOF_MEETING_KEYS, "12m", "24m"]:
-        s = asof_series(f"eof_tpm_{k}", as_of)
-        if len(s):
-            eof[k] = float(s.iloc[-1])
-            survey_date = max(survey_date or s.index[-1].date(), s.index[-1].date())
+    # All EOF keys from the same (latest) round, never mixed across rounds.
+    rnd = latest_eof_round({k: series(f"eof_tpm_{k}") for k in EOF_KEYS}, as_of)
     tib = asof_series("cl_tib", as_of)
     return FitInputs(
         quotes=quotes,
@@ -190,8 +194,7 @@ def fit_inputs(as_of: date | None = None, use_2y: bool = False, w2y: float = 0.1
             for sid, _ in SHORT_SWAPS
             if len(asof_series(sid, as_of))
         ),
-        survey_date=survey_date,
-        eof_latest=eof,
+        eof_round=rnd,
         spread_bp=average_spread_bp(tib, tpm),
     )
 
@@ -215,7 +218,7 @@ def market_anchors(steps, venues: tuple[str, ...], tpm0: float, weight: float) -
 @st.cache_data(ttl=TTL)
 def implied_fit(
     lam: float = 0.005,
-    mu: float = 0.25,
+    mu: float = 0.05,
     anchor_venues: tuple[str, ...] = ("kalshi",),
     anchor_weight: float = 4.0,
     use_2y: bool = False,
@@ -223,15 +226,9 @@ def implied_fit(
     as_of: date | None = None,
 ) -> tuple[PathFit, FitInputs, np.ndarray]:
     fi = fit_inputs(as_of, use_2y, w2y)
-    steps = build_steps(meetings(), fi.curve_date, N_STEPS)
-    e = fi.eof_latest
-    prior = build_prior(
-        steps,
-        fi.tpm0,
-        fi.survey_date,
-        {i: e[k] for i, k in enumerate(EOF_MEETING_KEYS) if k in e},
-        {d: e[k] for d, k in ((365, "12m"), (730, "24m")) if k in e},
-    )
+    ms = meetings()
+    steps = build_steps(ms, fi.curve_date, N_STEPS)
+    prior = eof_prior(steps, fi.tpm0, fi.eof_round, ms)
     anchors = [] if as_of else market_anchors(steps, anchor_venues, fi.tpm0, anchor_weight)
     fit = fit_path(
         fi.quotes, fi.tpm0, steps, prior, anchors, FitConfig(lam=lam, mu=mu, spread_bp=fi.spread_bp)

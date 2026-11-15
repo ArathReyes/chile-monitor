@@ -277,6 +277,19 @@ def last_obs_date(conn: duckdb.DuckDBPyConnection, series_id: str) -> date | Non
     return _first(conn, "SELECT max(obs_date) FROM observations WHERE series_id = ?", [series_id])
 
 
+def delete_invalid_observations(
+    conn: duckdb.DuckDBPyConnection, before: date = date(1950, 1, 1)
+) -> int:
+    """Delete placeholder rows dated before `before` from observations (history is kept).
+
+    Returns the number of rows deleted.
+    """
+    n = _first(conn, "SELECT count(*) FROM observations WHERE obs_date < ?", [before])
+    if n:
+        conn.execute("DELETE FROM observations WHERE obs_date < ?", [before])
+    return int(n)
+
+
 def read_vintages(conn: duckdb.DuckDBPyConnection, series_id: str) -> pd.DataFrame:
     return conn.execute(
         "SELECT obs_date, value, fetched_at FROM observations_history "

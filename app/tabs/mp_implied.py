@@ -12,7 +12,7 @@ from charts import INK, ROLE, base_layout, line, markers
 from components import source_badge
 from mp_ui import pending, refresh_row, series_caption
 
-DEFAULTS = {"mp_lam": 0.005, "mp_mu": 0.25, "mp_anchor": True, "mp_2y": False, "mp_w2y": 0.1}
+DEFAULTS = {"mp_lam": 0.005, "mp_mu": 0.05, "mp_anchor": True, "mp_2y": False, "mp_w2y": 0.1}
 
 
 def _state(k):
@@ -234,7 +234,7 @@ def render() -> None:
         c[0].slider(
             "λ (survey prior)", 0.0, 0.2, DEFAULTS["mp_lam"], 0.005, key="mp_lam", format="%.3f"
         )
-        c[1].slider("μ (smoothness)", 0.0, 2.0, DEFAULTS["mp_mu"], 0.05, key="mp_mu")
+        c[1].slider("μ (smoothness)", 0.0, 2.0, DEFAULTS["mp_mu"], 0.01, key="mp_mu")
         c[2].toggle("Anchor meeting 1 to Kalshi", DEFAULTS["mp_anchor"], key="mp_anchor")
         c[3].toggle("Use SPC 2y (weak, flagged)", DEFAULTS["mp_2y"], key="mp_2y")
         if _state("mp_2y"):

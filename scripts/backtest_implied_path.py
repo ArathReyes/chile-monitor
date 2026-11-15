@@ -36,13 +36,18 @@ OUT_DIR = Path("docs/backtests")
 METHOD_NAMES = {"model": "Implied path", "eof": "EOF survey", "rw": "Random walk (0)",
                 "spc90": "SPC-90d single step"}  # fmt: skip
 GRID_MUS = (0.0, 0.01, 0.05, 0.25, 1.0)  # spec grid {0.05, 0.25, 1} plus 0 and 0.01
+OLD_MU = 0.25  # default before 2026-11-15
 CONFIGS = ((0.005, 0.25), (0.005, 0.05), (0.02, 0.05), (0.005, 0.01))
 TARGET_NAMES = {"m1": "Meeting 1 change", "cum2": "Cumulative to meeting 2",
                 "cum3": "Cumulative to meeting 3"}  # fmt: skip
 
 
-# Written from the run of 2026-11-15 (data through 2026-11-13); revisit if the numbers move.
+# Written from the first run of 2026-11-15 (μ = 0.25, data through 2026-11-13); the
+# recommendation was applied the same day. Revisit if the numbers move.
 CONCLUSIONS = """\
+Written from the first run (μ = 0.25); the recommendation at the end has been applied (see
+'Changes applied' at the top). Tables above are from the current defaults.
+
 1. **Meeting 1, short horizons.** At h = 1-5 bd the implied path cuts the random-walk error by
    ~75% and beats the SPC-90d single-step approximation clearly (MAE ~10 vs ~15-18bp), which
    systematically overshoots because it loads every move inside the 90-day window onto one
@@ -61,9 +66,9 @@ CONCLUSIONS = """\
 5. **Cumulative to meetings 2-3** is hard for everyone (MAE ~57-62bp at h = 1, n = 43); the model
    is on par with the EOF and far better than a random walk. λ barely matters (3 swaps pin the
    first meetings; λ mainly shapes the tail).
-6. **Prior alignment bug** (app maps EOF 'next' to the first future step even when that meeting
-   has been held since the round): affects ~20% of backtest rows but changes MAE by < 0.2bp
-   at λ = 0.005, so it is cosmetic for now; it matters if λ is raised.
+6. **Prior alignment bug** (the app mapped EOF 'next' to the first future step even when that
+   meeting had been held since the round; fixed 2026-11-15): affects ~20% of backtest rows but
+   changes MAE by < 0.2bp at λ = 0.005, so it was cosmetic; it matters if λ is raised.
 
 **Recommendation:** μ = 0.05 (from 0.25), keep λ = 0.005 (0.02 is equivalent within noise).
 Meeting-1 MAE falls from 10.0 / 11.2 / 18.1bp to 8.8 / 9.3 / 14.7bp at h = 1 / 5 / 20, bias
@@ -151,7 +156,7 @@ def prior_alignment_check(df: pd.DataFrame, df_app: pd.DataFrame) -> pd.DataFram
     key = ["meeting_id", "horizon_bd"]
     aff = df[df["prior_offset"] > 0][key]
     out = []
-    for name, d in (("aligned prior (backtest)", df), ("app mapping (unaligned)", df_app)):
+    for name, d in (("aligned prior (current)", df), ("old app mapping (unaligned)", df_app)):
         x = d.merge(aff, on=key)
         for t in ("m1", "cum3"):
             act = "actual_change_bp" if t == "m1" else "actual_cum3_bp"
@@ -176,6 +181,43 @@ def config_comparison(series: dict[str, pd.Series], meetings: list[Meeting]) -> 
     return pd.DataFrame(rows)
 
 
+def changes_table(configs: pd.DataFrame) -> pd.DataFrame:
+    """Meeting-1 headline metrics, previous default μ vs current default (λ fixed)."""
+    old, new = FitConfig(mu=OLD_MU), FitConfig()
+    rows = []
+    for h in sorted(configs["h (bd)"].unique()):
+        g = configs[configs["h (bd)"] == h]
+        pick = {
+            name: g[(g["lam"] == c.lam) & (g["mu"] == c.mu)].iloc[0]
+            for name, c in (("before", old), ("after", new))
+        }
+        row = {"h (bd)": h}
+        for col, label in (("mae_m1", "MAE"), ("bias_m1", "bias"), ("bucket_m1 %", "bucket %")):
+            row[f"{label} before"] = pick["before"][col]
+            row[f"{label} after"] = pick["after"][col]
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def changes_section(configs: pd.DataFrame) -> list[str]:
+    return [
+        "## Changes applied (2026-11-15)",
+        f"- Smoothness default μ {OLD_MU} → {FitConfig().mu} (λ stays {FitConfig().lam}): "
+        "`FitConfig`, the app's sliders and `implied_fit` defaults.",
+        "- Prior alignment: when meetings were held between the latest EOF round and the curve "
+        "date, the round's meeting positions now shift by that count (`tpm_implied.eof_prior`, "
+        "shared by the app and this harness; previously the app mapped the round's 'next' to the "
+        "first future meeting).",
+        "- Single EOF round: the app now takes every EOF key from the latest survey date "
+        "(`tpm_implied.latest_eof_round`) instead of each series' own latest value.",
+        "- The harness already used the aligned, single-round prior, so the metric changes below "
+        "come from μ; the prior fixes change the live app (see 'Prior alignment').",
+        "Meeting-1 change, all regimes (MAE and bias in bp; before = μ "
+        f"{OLD_MU}, after = μ {FitConfig().mu}):",
+        md_table(changes_table(configs)),
+    ]
+
+
 def write_report(
     df: pd.DataFrame,
     summary: pd.DataFrame,
@@ -191,6 +233,7 @@ def write_report(
         f"Generated {date.today():%Y-%m-%d} by `scripts/backtest_implied_path.py` from a copy of "
         f"`data/monitor.duckdb`. Model: `monitor.models.tpm_implied.fit_path`; harness: "
         f"`monitor.models.backtest`. Per-row results: `01-implied-path.csv`.",
+        *changes_section(configs),
         "## Method",
         f"- Sample: {df['meeting_id'].nunique()} of {n_confirmed} confirmed BCCh meetings "
         f"({first} to {last}, holds included). Steps use true meeting dates (the BCCh publishes "
@@ -211,14 +254,14 @@ def write_report(
         "T+2 CL business days (`spc_start`), 360 basis.",
         f"- EOF: a round dated d is used from d + {EOF_LAG_DAYS} day (results are published after"
         f" the survey closes). The benchmark needs a round within {EOF_MAX_AGE_DAYS} days of the "
-        "decision. The prior uses all keys from the single latest round (the app takes each "
-        "series' latest value separately, which can mix rounds).",
+        "decision. The prior uses all keys from the single latest round "
+        "(`tpm_implied.latest_eof_round`, same as the app).",
         f"- EEE: dated the 1st of the month, used {EEE_PUBLICATION_LAG_DAYS} days later.",
         "- TPM, TIB (spread = 20-obs average TIB − TPM): observations dated ≤ as-of.",
-        "- Prior mapping as in `app/mp_data.implied_fit` (EOF next, rpm1, rpm2_3m, rpm3, rpm4_6m "
-        "by meeting position; 12m → 365 days, 24m → 730 days), except meeting positions are "
-        "shifted by the number of meetings held between the EOF round and the as-of date "
-        "(see 'Prior alignment' below).",
+        "- Prior mapping = `tpm_implied.eof_prior`, shared with `app/mp_data.implied_fit` (EOF "
+        "next, rpm1, rpm2_3m, rpm3, rpm4_6m by meeting position; 12m → 365 days, 24m → 730 days); "
+        "meeting positions shift by the number of meetings held between the EOF round and the "
+        "first step (see 'Prior alignment' below).",
         f"- Direction hit: sign of change with a ±{DEAD_BAND_BP:.0f}bp dead band (inside = hold). "
         "25bp bucket hit: implied change rounded to the nearest 25bp equals the realized change.",
         "## Headline: meeting-1 change (all regimes)",
@@ -234,7 +277,7 @@ def write_report(
         md_table(regime_table(summary)),
         "## λ/μ sensitivity (h = 1 bd)",
         "λ = prior weight, μ = smoothness weight (per bp², swap weight 1). Current defaults "
-        "λ = 0.005, μ = 0.25.",
+        f"λ = {FitConfig().lam}, μ = {FitConfig().mu} (μ was {OLD_MU} before 2026-11-15).",
         "The spec grid is μ ∈ {0.05, 0.25, 1}; μ = 0 and 0.01 were added after the spec grid "
         "showed MAE falling as μ falls.",
         md_table(grid, 2),
@@ -244,8 +287,9 @@ def write_report(
         md_table(worst_misses(df)),
         "## Prior alignment",
         "Rows where the latest EOF round predates a meeting already held by the as-of date "
-        f"({int((df['prior_offset'] > 0).sum())} rows). The app's mapping assigns the round's "
-        "'next' to the first future step, i.e. one meeting too late.",
+        f"({int((df['prior_offset'] > 0).sum())} rows). The old app mapping (before 2026-11-15) "
+        "assigned the round's 'next' to the first future step, i.e. one meeting too late; app "
+        "and backtest now share the aligned mapping (`tpm_implied.eof_prior`).",
         md_table(align),
         "## Skipped rows",
         md_table(skipped(df)) if len(skipped(df)) else "None.",

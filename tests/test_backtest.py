@@ -9,14 +9,21 @@ from monitor.models.backtest import (
     EOF_MEETING_KEYS,
     N_STEPS,
     SHORT_SWAPS,
+    eof_round_as_of,
     inputs_as_of,
-    latest_eof_round,
     metrics,
     run_backtest,
     subtract_business_days,
     summarize,
 )
-from monitor.models.tpm_implied import FitConfig, SwapQuote, build_prior, build_steps, model_rates
+from monitor.models.tpm_implied import (
+    EofRound,
+    FitConfig,
+    SwapQuote,
+    build_steps,
+    eof_prior,
+    model_rates,
+)
 
 START = date(2024, 1, 2)
 
@@ -95,9 +102,9 @@ def test_eof_round_uses_single_round_and_publication_lag():
         "eof_tpm_next": pd.Series([5.0, 4.75], index=pd.to_datetime(["2024-01-05", "2024-01-20"])),
         "eof_tpm_rpm1": pd.Series([4.5], index=pd.to_datetime(["2024-01-05"])),
     }
-    rnd = latest_eof_round(date(2024, 1, 20), s)
+    rnd = eof_round_as_of(date(2024, 1, 20), s)
     assert rnd.survey_date == date(2024, 1, 5)
-    rnd = latest_eof_round(date(2024, 1, 21), s)
+    rnd = eof_round_as_of(date(2024, 1, 21), s)
     assert rnd.survey_date == date(2024, 1, 20)
     assert rnd.values == {"next": 4.75}  # rpm1 from an older round is not mixed in
 
@@ -138,13 +145,25 @@ def test_prior_aligned_when_meeting_held_since_survey():
     assert inputs_as_of(t, series, ms, align_prior=False).prior[0] == pytest.approx(4.75)
 
 
-@pytest.mark.xfail(reason="build_prior maps EOF 'next' to steps[0] even after that meeting passed")
-def test_build_prior_skips_meetings_held_since_survey():
+def test_eof_prior_skips_meetings_held_since_survey():
     ms = make_meetings()
     sd = ms[0][0] - timedelta(days=3)
     steps = build_steps(ms, ms[0][1] + timedelta(days=2), N_STEPS)
-    prior = build_prior(steps, 5.0, sd, {0: 4.75, 1: 4.5})
-    assert prior[0] == pytest.approx(4.5)
+    rnd = EofRound(sd, {"next": 4.75, "rpm1": 4.5, "rpm2_3m": 4.25})
+    prior = eof_prior(steps, 5.0, rnd, ms)
+    assert prior[0] == pytest.approx(4.5)  # the round's rpm1 is now the first future meeting
+    assert prior[1] == pytest.approx(4.25)
+    assert eof_prior(steps, 5.0, rnd, ms, align=False)[0] == pytest.approx(4.75)
+
+
+def test_eof_prior_no_shift_when_no_meeting_held():
+    ms = make_meetings()
+    sd = ms[0][0] - timedelta(days=10)
+    steps = build_steps(ms, ms[0][0] - timedelta(days=2), N_STEPS)
+    rnd = EofRound(sd, {"next": 4.75, "rpm1": 4.5})
+    prior = eof_prior(steps, 5.0, rnd, ms)
+    assert prior[0] == pytest.approx(4.75)
+    assert prior[1] == pytest.approx(4.5)
 
 
 # ------------------------------------------------------------------ metrics
