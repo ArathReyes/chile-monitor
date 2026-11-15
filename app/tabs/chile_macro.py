@@ -1,36 +1,31 @@
-"""Chile Macro tab (placeholder)."""
+"""Chile Macro tab: seven sub-tabs."""
 
-from components import SourceRow, TabSpec, placeholder_card
+from __future__ import annotations
 
-SPEC = TabSpec(
-    "Chile Macro",
-    "Chilean inflation, activity, labor, trade and FX, plus the CPI nowcast and UF carry tools.",
-    [
-        "CPI headline, core (IPC SAE), goods/services (base 2023=100)",
-        "IMACEC: mining vs non-mining, 3m/3m SAAR",
-        "Labor market and trade",
-        "USD/CLP dólar observado",
-        "Tool: UF carry calculator",
-        "Tool: CPI seasonality / nowcast table",
-        "Tool: surprise index (actual minus EEE median)",
-        "Data vintages (revisions)",
-    ],
-    [
-        SourceRow(
-            "CPI, IMACEC, labor, trade",
-            "BCCh BDE API",
-            "REST GetSeries",
-            "BCCH_API_TOKEN",
-            "Monthly",
-        ),
-        SourceRow(
-            "UF, dólar observado", "BCCh BDE API", "REST GetSeries", "BCCH_API_TOKEN", "Daily"
-        ),
-        SourceRow("EEE medians", "BCCh BDE API", "REST GetSeries", "BCCH_API_TOKEN", "Monthly"),
-        SourceRow("Release calendar", "INE Chile", "scraping", "none", "Annual / monthly"),
-    ],
+import streamlit as st
+
+from tabs import (
+    cm_activity,
+    cm_inflation,
+    cm_labor,
+    cm_overview,
+    cm_seasonality,
+    cm_surprises,
+    cm_uf,
 )
+
+SUBTABS = [
+    ("Overview", cm_overview),
+    ("Inflation", cm_inflation),
+    ("Seasonality & Nowcast", cm_seasonality),
+    ("UF & Carry", cm_uf),
+    ("Activity", cm_activity),
+    ("Labor & External", cm_labor),
+    ("Surprises & Calendar", cm_surprises),
+]
 
 
 def render() -> None:
-    placeholder_card(SPEC, key="chile_macro")
+    for tab, (_, module) in zip(st.tabs([t[0] for t in SUBTABS]), SUBTABS, strict=True):
+        with tab:
+            module.render()

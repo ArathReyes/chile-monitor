@@ -286,7 +286,9 @@ def read_wide(
         params.append(start)
     long = conn.execute(query, params).df()
     if long.empty:
-        return pd.DataFrame(columns=series_ids)
+        return pd.DataFrame(
+            columns=series_ids, index=pd.DatetimeIndex([], name="obs_date"), dtype=float
+        )
     wide = long.pivot(index="obs_date", columns="series_id", values="value").sort_index()
     wide.index = pd.to_datetime(wide.index)
     return wide.reindex(columns=series_ids)

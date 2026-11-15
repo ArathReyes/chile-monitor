@@ -68,7 +68,7 @@ def surprise_index(
     """
     s = surprises[surprises["indicator"].isin(indicators)].dropna(subset=["zscore"])
     if s.empty:
-        return pd.Series(dtype=float)
+        return pd.Series(dtype=float, index=pd.DatetimeIndex([]))
     rel = pd.to_datetime(s["release_date"]).to_numpy()
     z = s["zscore"].to_numpy()
     grid = pd.date_range(

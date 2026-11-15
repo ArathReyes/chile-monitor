@@ -1,7 +1,15 @@
 # Spec 02 — Chile Macro tab
 
-Status: **planning** (saved 2026-11-15). Source: Prompt 3 (user). Full text below; deviations
-agreed during implementation will be listed here.
+Status: **implemented** (2026-11-15). Source: Prompt 3 (user).
+
+## Decisions taken during implementation (user, 2026-11-15)
+1. No market-implied monthly CPI: short-end UF swaps aren't public; don't model or guess them.
+2. USD/CLP vs copper as two aligned panels (no dual axis); copper from the BDE (LME), not yfinance.
+3. BCCh statistical release calendar on hold (bot-protected); INE calendar scraped.
+4. No real-time vintage database: the UI states IMACEC surprises use revised data.
+5. UF formula cited by exact reproduction of BDE history (no official doc available).
+6. Real ICMO computed (nominal deflated by CPI), labeled.
+Other: CPI weights recovered from the fixed-weight index (no INE table needed); 13 divisions (base 2023).
 
 ## Discovery notes (2026-11-15)
 - BDE has no short-end UF Cámara swaps (90/180/360d); the UF tenor table starts at 1y. The

@@ -11,7 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-from datetime import date, timedelta
+from datetime import timedelta
 
 import duckdb
 
@@ -35,7 +35,8 @@ def ingest_one(
     last = None if full else storage.last_obs_date(conn, spec.series_id)
     first = last - timedelta(days=REVISION_WINDOW.get(spec.freq, 30)) if last else None
     with storage.ingest_run(conn, f"bcch_series.{spec.series_id}", "bcch") as run:
-        payload = src.request_series(spec.source_code, first, date.today())
+        # no lastdate: some series are published ahead (e.g. the UF up to the 9th of next month)
+        payload = src.request_series(spec.source_code, first, None)
         storage.save_raw(
             "bcch", f"{spec.series_id}.json", json.dumps(payload, ensure_ascii=False).encode()
         )
