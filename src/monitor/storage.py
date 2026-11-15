@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS documents (
     doc_id       VARCHAR PRIMARY KEY,
     kind         VARCHAR NOT NULL,
     institution  VARCHAR NOT NULL,
+    meeting_id   VARCHAR,
     published_at TIMESTAMP,
     title        VARCHAR,
     url          VARCHAR,
@@ -217,6 +218,39 @@ def read_series(
     return conn.execute(query + " ORDER BY obs_date", params).df()
 
 
+def read_wide(
+    conn: duckdb.DuckDBPyConnection, series_ids: list[str], start: date | None = None
+) -> pd.DataFrame:
+    """Observations for several series, pivoted to obs_date x series_id (no filling)."""
+    if not series_ids:
+        return pd.DataFrame()
+    query = "SELECT series_id, obs_date, value FROM observations WHERE series_id IN ?"
+    params: list[Any] = [series_ids]
+    if start is not None:
+        query += " AND obs_date >= ?"
+        params.append(start)
+    long = conn.execute(query, params).df()
+    if long.empty:
+        return pd.DataFrame(columns=series_ids)
+    wide = long.pivot(index="obs_date", columns="series_id", values="value").sort_index()
+    wide.index = pd.to_datetime(wide.index)
+    return wide.reindex(columns=series_ids)
+
+
+def last_fetched(conn: duckdb.DuckDBPyConnection, series_ids: list[str]) -> datetime | None:
+    row = conn.execute(
+        "SELECT max(fetched_at) FROM observations WHERE series_id IN ?", [series_ids]
+    ).fetchone()
+    return row[0] if row else None
+
+
+def last_obs_date(conn: duckdb.DuckDBPyConnection, series_id: str) -> date | None:
+    row = conn.execute(
+        "SELECT max(obs_date) FROM observations WHERE series_id = ?", [series_id]
+    ).fetchone()
+    return row[0] if row else None
+
+
 def read_vintages(conn: duckdb.DuckDBPyConnection, series_id: str) -> pd.DataFrame:
     return conn.execute(
         "SELECT obs_date, value, fetched_at FROM observations_history "
@@ -239,6 +273,17 @@ def insert_market_snapshot(
         "INSERT INTO market_snapshots VALUES (?, ?, ?, ?)",
         [source, ticker, snapshot_ts or utcnow(), json.dumps(payload)],
     )
+
+
+def read_snapshots(
+    conn: duckdb.DuckDBPyConnection, source: str, since: datetime | None = None
+) -> pd.DataFrame:
+    query = "SELECT ticker, snapshot_ts, payload_json FROM market_snapshots WHERE source = ?"
+    params: list[Any] = [source]
+    if since is not None:
+        query += " AND snapshot_ts >= ?"
+        params.append(since)
+    return conn.execute(query + " ORDER BY snapshot_ts", params).df()
 
 
 # ----------------------------------------------------------------- ingest_log

@@ -1,0 +1,39 @@
+{
+ "events": [
+  {
+   "id": "1280565",
+   "title": "Central Bank of Chile Decision in March?",
+   "slug": "central-bank-of-chile-decision-in-march-2027",
+   "endDate": "2027-03-30T23:59:00Z",
+   "closed": false
+  },
+  {
+   "id": "1185010",
+   "title": "Central Bank of Chile decision in December",
+   "slug": "central-bank-of-chile-decision-in-december-2026",
+   "endDate": "2026-12-15T00:00:00Z",
+   "closed": false
+  },
+  {
+   "id": "1141225",
+   "title": "Central Bank of Chile decision in October",
+   "slug": "central-bank-of-chile-decision-in-october-2026",
+   "endDate": "2026-10-27T00:00:00Z",
+   "closed": true
+  },
+  {
+   "id": "1280307",
+   "title": "Central Bank of Chile Decision in January?",
+   "slug": "central-bank-of-chile-decision-in-january-2027",
+   "endDate": "2027-01-26T23:59:00Z",
+   "closed": false
+  },
+  {
+   "id": "903086",
+   "title": "Will Chile vote to change its constitution?",
+   "slug": "will-chile-vote-to-change-its-constitution",
+   "endDate": "2023-12-17T00:00:00Z",
+   "closed": true
+  }
+ ]
+}

@@ -65,15 +65,25 @@ class BcchSource(Source):
         # BDE declares charset=ISO-8859-1; resp.json() would assume UTF-8.
         return json.loads(resp.text)
 
-    def get_series(
+    def request_series(
         self, code: str, firstdate: date | None = None, lastdate: date | None = None
-    ) -> pd.DataFrame:
+    ) -> dict[str, Any]:
+        """Raw GetSeries payload (for saving under data/raw before parsing)."""
         params = {"function": "GetSeries", "timeseries": code}
         if firstdate:
             params["firstdate"] = firstdate.isoformat()
         if lastdate:
             params["lastdate"] = lastdate.isoformat()
-        return parse_get_series(self._request(params))
+        return self._request(params)
+
+    @staticmethod
+    def parse(payload: dict[str, Any]) -> pd.DataFrame:
+        return parse_get_series(payload)
+
+    def get_series(
+        self, code: str, firstdate: date | None = None, lastdate: date | None = None
+    ) -> pd.DataFrame:
+        return parse_get_series(self.request_series(code, firstdate, lastdate))
 
     def search_series(self, frequency: Frequency, query: str | None = None) -> pd.DataFrame:
         """List BDE series for a frequency, optionally filtered by a case-insensitive substring
@@ -87,8 +97,11 @@ class BcchSource(Source):
             df = df[text.str.contains(query, case=False, regex=False)]
         return df.reset_index(drop=True)
 
-    def fetch(self, *args: Any, **kwargs: Any) -> pd.DataFrame:
-        raise NotImplementedError("bcch ingestion jobs come with their specs; use get_series()")
+    def fetch(
+        self, code: str, firstdate: date | None = None, lastdate: date | None = None
+    ) -> pd.DataFrame:
+        """Tidy ``[obs_date, value]`` for one BDE code (see monitor.jobs.bcch_series)."""
+        return self.get_series(code, firstdate, lastdate)
 
     def health_check(self) -> HealthResult:
         if (missing := self.missing_key()) is not None:

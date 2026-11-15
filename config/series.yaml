@@ -3,103 +3,432 @@
 # (BDE: monitor.sources.bcch.search_series, or an official doc example).
 # source_code "VERIFY" = unknown; jobs must skip it until filled in.
 series:
-  - series_id: cl_tpm
-    source: bcch
-    source_code: F022.TPM.TIN.D001.NO.Z.D
-    name: Tasa de Política Monetaria (TPM)
-    freq: D
-    unit: pct
-    tab: monetary_policy
-    transform: level
-    verified: true
-    notes: Code and description confirmed by the GetSeries example in the official BDE REST docs.
-
-  - series_id: cl_spc_nom_10y
-    source: bcch
-    source_code: F022.SPC.TIN.AN10.NO.Z.D
-    name: SPC nominal 10y
-    freq: D
-    unit: pct
-    tab: curves_rates
-    transform: level
-    verified: true  # confirmed via SearchSeries 2026-11-14
-    notes: 1y-10y tenor table, 365-day basis, closing data.
-
-  - series_id: cl_spc_uf_2y
-    source: bcch
-    source_code: F022.SPC.TIN.AN02.UF.Z.D
-    name: SPC UF 2y
-    freq: D
-    unit: pct
-    tab: curves_rates
-    transform: level
-    verified: true  # confirmed via SearchSeries 2026-11-14
-    notes: Real (UF) Cámara swap, 365-day basis, closing data.
-
-  - series_id: cl_spc_nom_90d
-    source: bcch
-    source_code: F022.SPC.TPR.D090.NO.Z.D
-    name: SPC nominal 90d traded
-    freq: D
-    unit: pct
-    tab: monetary_policy
-    transform: level
-    verified: true  # confirmed via SearchSeries 2026-11-14
-    notes: Traded rate, 360-day simple basis, T-1. Harmonize basis before mixing with tenor table.
-
-  - series_id: cl_spc_nom_360d
-    source: bcch
-    source_code: F022.SPC.TPR.D360.NO.Z.D
-    name: SPC nominal 360d traded
-    freq: D
-    unit: pct
-    tab: monetary_policy
-    transform: level
-    verified: true  # confirmed via SearchSeries 2026-11-14
-    notes: Traded rate, 360-day simple basis, T-1.
-
-  - series_id: cl_imacec
-    source: bcch
-    source_code: F032.IMC.IND.Z.Z.EP18.Z.Z.0.M
-    name: IMACEC empalmado, serie original (2018=100)
-    freq: M
-    unit: index
-    tab: chile_macro
-    transform: level
-    verified: true  # confirmed via SearchSeries 2026-11-14
-    notes: >-
-      Reference year 2018 is still current for IMACEC. SA variant: F032.IMC.IND.Z.Z.EP18.Z.Z.1.M;
-      non-mining: ...EP18.N03.Z.0.M; mining: ...EP18.03.Z.0.M.
-
-  - series_id: cl_cpi
-    source: bcch
-    source_code: F074.IPC.IND.Z.2023.C.M
-    name: IPC General (Prom. 2023=100), INE
-    freq: M
-    unit: index
-    tab: chile_macro
-    transform: level
-    verified: true  # confirmed via SearchSeries 2026-11-14
-    notes: >-
-      Official INE index. BCCh-spliced alternative with long history: G073.IPC.IND.2023.M
-      (IPC Analíticos family, also has SAE/volátiles splits). Divisions: F074.IPC.IND.DIV*.2023.C.M.
-
-  - series_id: us_ust_10y
-    source: fred
-    source_code: DGS10
-    name: UST 10y constant maturity
-    freq: D
-    unit: pct
-    tab: global_macro
-    transform: level
-    verified: true
-
-  - series_id: us_ust_2y
-    source: fred
-    source_code: DGS2
-    name: UST 2y constant maturity
-    freq: D
-    unit: pct
-    tab: global_macro
-    transform: level
-    verified: true
+- series_id: cl_tpm
+  source: bcch
+  source_code: F022.TPM.TIN.D001.NO.Z.D
+  name: Tasa de Política Monetaria (TPM)
+  freq: D
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: Code and description confirmed by the GetSeries example in the official BDE REST docs.
+- series_id: cl_spc_nom_10y
+  source: bcch
+  source_code: F022.SPC.TIN.AN10.NO.Z.D
+  name: SPC nominal 10y
+  freq: D
+  unit: pct
+  tab: curves_rates
+  transform: level
+  verified: true
+  notes: 1y-10y tenor table, 365-day basis, closing data.
+- series_id: cl_spc_uf_2y
+  source: bcch
+  source_code: F022.SPC.TIN.AN02.UF.Z.D
+  name: SPC UF 2y
+  freq: D
+  unit: pct
+  tab: curves_rates
+  transform: level
+  verified: true
+  notes: Real (UF) Cámara swap, 365-day basis, closing data.
+- series_id: cl_spc_nom_90d
+  source: bcch
+  source_code: F022.SPC.TPR.D090.NO.Z.D
+  name: SPC nominal 90d traded
+  freq: D
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: Traded rate, 360-day simple basis, T-1. Harmonize basis before mixing with tenor table.
+- series_id: cl_spc_nom_360d
+  source: bcch
+  source_code: F022.SPC.TPR.D360.NO.Z.D
+  name: SPC nominal 360d traded
+  freq: D
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: Traded rate, 360-day simple basis, T-1.
+- series_id: cl_imacec
+  source: bcch
+  source_code: F032.IMC.IND.Z.Z.EP18.Z.Z.0.M
+  name: IMACEC empalmado, serie original (2018=100)
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'Reference year 2018 is still current for IMACEC. SA variant: F032.IMC.IND.Z.Z.EP18.Z.Z.1.M; non-mining:
+    ...EP18.N03.Z.0.M; mining: ...EP18.03.Z.0.M.'
+- series_id: cl_cpi
+  source: bcch
+  source_code: F074.IPC.IND.Z.2023.C.M
+  name: IPC General (Prom. 2023=100), INE
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'Official INE index. BCCh-spliced alternative with long history: G073.IPC.IND.2023.M (IPC Analíticos family,
+    also has SAE/volátiles splits). Divisions: F074.IPC.IND.DIV*.2023.C.M.'
+- series_id: us_ust_10y
+  source: fred
+  source_code: DGS10
+  name: UST 10y constant maturity
+  freq: D
+  unit: pct
+  tab: global_macro
+  transform: level
+  verified: true
+- series_id: us_ust_2y
+  source: fred
+  source_code: DGS2
+  name: UST 2y constant maturity
+  freq: D
+  unit: pct
+  tab: global_macro
+  transform: level
+  verified: true
+- series_id: cl_tib
+  source: bcch
+  source_code: F022.TIB.TIP.D001.NO.Z.D
+  name: Tasa interbancaria promedio (TIB)
+  freq: D
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: Overnight interbank average; TIB - TPM spread feeds the implied-path model.
+- series_id: cl_spc_nom_180d
+  source: bcch
+  source_code: F022.SPC.TPR.D180.NO.Z.D
+  name: SPC nominal 180d traded
+  freq: D
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: Traded rate, 360-day simple basis, T-1.
+- series_id: cl_spc_nom_2y
+  source: bcch
+  source_code: F022.SPC.TIN.AN02.NO.Z.D
+  name: SPC nominal 2y
+  freq: D
+  unit: pct
+  tab: curves_rates
+  transform: level
+  verified: true
+  notes: Tenor table, 365-day basis, close. >1y swaps pay semiannual ACT/360 coupons.
+- series_id: cl_spc_nom_3y
+  source: bcch
+  source_code: F022.SPC.TIN.AN03.NO.Z.D
+  name: SPC nominal 3y
+  freq: D
+  unit: pct
+  tab: curves_rates
+  transform: level
+  verified: true
+  notes: Tenor table, 365-day basis, close. >1y swaps pay semiannual ACT/360 coupons.
+- series_id: cl_spc_nom_4y
+  source: bcch
+  source_code: F022.SPC.TIN.AN04.NO.Z.D
+  name: SPC nominal 4y
+  freq: D
+  unit: pct
+  tab: curves_rates
+  transform: level
+  verified: true
+  notes: Tenor table, 365-day basis, close. >1y swaps pay semiannual ACT/360 coupons.
+- series_id: cl_spc_nom_5y
+  source: bcch
+  source_code: F022.SPC.TIN.AN05.NO.Z.D
+  name: SPC nominal 5y
+  freq: D
+  unit: pct
+  tab: curves_rates
+  transform: level
+  verified: true
+  notes: Tenor table, 365-day basis, close. >1y swaps pay semiannual ACT/360 coupons.
+- series_id: cl_spc_uf_1y
+  source: bcch
+  source_code: F022.SPC.TIN.AN01.UF.Z.D
+  name: SPC UF 1y
+  freq: D
+  unit: pct
+  tab: curves_rates
+  transform: level
+  verified: true
+  notes: Real (UF) Cámara swap, tenor table, 365-day basis, close.
+- series_id: cl_spc_uf_3y
+  source: bcch
+  source_code: F022.SPC.TIN.AN03.UF.Z.D
+  name: SPC UF 3y
+  freq: D
+  unit: pct
+  tab: curves_rates
+  transform: level
+  verified: true
+  notes: Real (UF) Cámara swap, tenor table, 365-day basis, close.
+- series_id: cl_spc_uf_4y
+  source: bcch
+  source_code: F022.SPC.TIN.AN04.UF.Z.D
+  name: SPC UF 4y
+  freq: D
+  unit: pct
+  tab: curves_rates
+  transform: level
+  verified: true
+  notes: Real (UF) Cámara swap, tenor table, 365-day basis, close.
+- series_id: cl_spc_uf_5y
+  source: bcch
+  source_code: F022.SPC.TIN.AN05.UF.Z.D
+  name: SPC UF 5y
+  freq: D
+  unit: pct
+  tab: curves_rates
+  transform: level
+  verified: true
+  notes: Real (UF) Cámara swap, tenor table, 365-day basis, close.
+- series_id: cl_spc_uf_10y
+  source: bcch
+  source_code: F022.SPC.TIN.AN10.UF.Z.D
+  name: SPC UF 10y
+  freq: D
+  unit: pct
+  tab: curves_rates
+  transform: level
+  verified: true
+  notes: Real (UF) Cámara swap, tenor table, 365-day basis, close.
+- series_id: cl_spc_uf_20y
+  source: bcch
+  source_code: F022.SPC.TIN.AN20.UF.Z.D
+  name: SPC UF 20y
+  freq: D
+  unit: pct
+  tab: curves_rates
+  transform: level
+  verified: true
+  notes: Real (UF) Cámara swap, tenor table, 365-day basis, close.
+- series_id: eof_tpm_next
+  source: bcch
+  source_code: F089.EOF.TPM.MA.D
+  name: 'EOF expectativa TPM: Próxima RPM'
+  freq: D
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: EOF median; dated by survey date (rounds before and after each RPM).
+- series_id: eof_tpm_rpm1
+  source: bcch
+  source_code: F089.EOF.TPM.1REU.D
+  name: 'EOF expectativa TPM: 1 reunión adelante'
+  freq: D
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: EOF median; dated by survey date (rounds before and after each RPM).
+- series_id: eof_tpm_rpm2_3m
+  source: bcch
+  source_code: F089.EOF.TPM.3MS.D
+  name: 'EOF expectativa TPM: 2 reuniones adelante (3 meses)'
+  freq: D
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: EOF median; dated by survey date (rounds before and after each RPM).
+- series_id: eof_tpm_rpm3
+  source: bcch
+  source_code: F089.EOF.TPM.3REU.D
+  name: 'EOF expectativa TPM: 3 reuniones adelante'
+  freq: D
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: EOF median; dated by survey date (rounds before and after each RPM).
+- series_id: eof_tpm_rpm4_6m
+  source: bcch
+  source_code: F089.EOF.TPM.6MS.D
+  name: 'EOF expectativa TPM: 4 reuniones adelante (6 meses)'
+  freq: D
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: EOF median; dated by survey date (rounds before and after each RPM).
+- series_id: eof_tpm_12m
+  source: bcch
+  source_code: F089.EOF.TPM.12MS.D
+  name: 'EOF expectativa TPM: 12 meses siguientes'
+  freq: D
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: EOF median; dated by survey date (rounds before and after each RPM).
+- series_id: eof_tpm_24m
+  source: bcch
+  source_code: F089.EOF.TPM.24MS.D
+  name: 'EOF expectativa TPM: 24 meses siguientes'
+  freq: D
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: EOF median; dated by survey date (rounds before and after each RPM).
+- series_id: eof_statement_bias
+  source: bcch
+  source_code: F089.EOF.PS_TPM.CMA.D
+  name: EOF percepción del sesgo de comunicados BCCh
+  freq: D
+  unit: index
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: Scale/meaning not confirmed (values like 5-8). VERIFY with EOF methodology before interpreting as hawk/dove.
+- series_id: eee_tpm_this_month
+  source: bcch
+  source_code: F089.TPM.TAS.11.M
+  name: 'EEE expectativa TPM: en el mes'
+  freq: M
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: EEE median; obs_date = survey month (1st of month).
+- series_id: eee_tpm_next_month
+  source: bcch
+  source_code: F089.TPM.TAS.31.M
+  name: 'EEE expectativa TPM: mes siguiente'
+  freq: M
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: EEE median; obs_date = survey month (1st of month).
+- series_id: eee_tpm_5m
+  source: bcch
+  source_code: F089.TPM.TAS.26.M
+  name: 'EEE expectativa TPM: dentro de 5 meses'
+  freq: M
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: EEE median; obs_date = survey month (1st of month).
+- series_id: eee_tpm_11m
+  source: bcch
+  source_code: F089.TPM.TAS.14.M
+  name: 'EEE expectativa TPM: dentro de 11 meses'
+  freq: M
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: EEE median; obs_date = survey month (1st of month).
+- series_id: eee_tpm_17m
+  source: bcch
+  source_code: F089.TPM.TAS.30.M
+  name: 'EEE expectativa TPM: dentro de 17 meses'
+  freq: M
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: EEE median; obs_date = survey month (1st of month).
+- series_id: eee_tpm_23m
+  source: bcch
+  source_code: F089.TPM.TAS.15.M
+  name: 'EEE expectativa TPM: dentro de 23 meses'
+  freq: M
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: EEE median; obs_date = survey month (1st of month).
+- series_id: eee_tpm_35m
+  source: bcch
+  source_code: F089.TPM.TAS.35.M
+  name: 'EEE expectativa TPM: dentro de 35 meses'
+  freq: M
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: EEE median; obs_date = survey month (1st of month).
+- series_id: eee_tpm_lp
+  source: bcch
+  source_code: F089.TPM.TAS.LP.M
+  name: 'EEE expectativa TPM: promedio largo plazo'
+  freq: M
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: EEE median; obs_date = survey month (1st of month).
+- series_id: eee_tpm_dec2026
+  source: bcch
+  source_code: F089.TPM.TAS.2026.M
+  name: 'EEE expectativa TPM: diciembre 2026'
+  freq: M
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: EEE median; obs_date = survey month (1st of month).
+- series_id: eee_tpm_dec2027
+  source: bcch
+  source_code: F089.TPM.TAS.2027.M
+  name: 'EEE expectativa TPM: diciembre 2027'
+  freq: M
+  unit: pct
+  tab: monetary_policy
+  transform: level
+  verified: true
+  notes: EEE median; obs_date = survey month (1st of month).
+- series_id: cl_cpi_core
+  source: bcch
+  source_code: F074.IPCSAE.IND.Z.2023.C.M
+  name: IPC SAE (Prom. 2023=100), INE
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: 'Official, starts Jan 2023. Long history: cl_cpi_core_spliced.'
+- series_id: cl_cpi_core_spliced
+  source: bcch
+  source_code: F074.IPCSAE.IND.Z.EP23.Z.M
+  name: IPC SAE empalmado (cifras oficiales INE), base 2023
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: From Dec 2009; used for y/y history.
+- series_id: cl_cpi_spliced
+  source: bcch
+  source_code: G073.IPC.IND.2023.M
+  name: IPC general empalmado BCCh, base 2023
+  freq: M
+  unit: index
+  tab: chile_macro
+  transform: level
+  verified: true
+  notes: From Dec 1998; used for y/y history.
+- series_id: cl_cpi_yoy
+  source: bcch
+  source_code: G073.IPC.V12.2023.M
+  name: IPC general, variación anual (empalme BCCh)
+  freq: M
+  unit: pct
+  tab: chile_macro
+  transform: level
+  verified: true

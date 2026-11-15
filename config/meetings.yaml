@@ -1,15 +1,30 @@
 # Monetary policy meeting calendar. Times are local to the central bank.
-# TODO: populate BCCh RPM dates from bcentral.cl (official annual calendar)
-#       and FOMC dates from federalreserve.gov. Do not enter unconfirmed dates.
-# Entry shape:
-#   - decision_date: 2026-01-27      # date the decision is announced
-#     effective_date: 2026-01-28     # date the new rate applies
-#     announcement_time: "18:00"     # local time (America/Santiago for BCCh)
-#     ipom: false                    # BCCh only: IPoM published around this meeting
-#     notes: ""
+# Fields: meeting_id, start_date (first day of a 2-day RPM, optional), decision_date,
+# decision_time_local (America/Santiago), effective_date (defaults to next CL business day),
+# has_ipom, source, confirmed (true only once checked against the official BCCh calendar).
+# TODO: confirm/complete from the BCCh calendar page
+#   (https://www.bcentral.cl/es/web/banco-central/noticias-y-publicaciones/prensa/calendario-de-politica-monetaria-y-financiera
+#    — URL cited by Polymarket's market rules; bcentral.cl blocks automated access, so save it manually
+#    into data/manual/bcch_web/calendar/).
 bcch:
   timezone: America/Santiago
-  meetings: []
+  meetings:
+    - meeting_id: RPM-2026-10
+      decision_date: 2026-10-27
+      source: "Kalshi KXCBDCHILE-26OCT27 + Polymarket rules ('scheduled for October 27, 2026')"
+      confirmed: false
+    - meeting_id: RPM-2026-12
+      decision_date: 2026-12-15
+      source: "Kalshi KXCBDCHILE-26DEC15 + Polymarket rules ('scheduled for December 15, 2026')"
+      confirmed: false
+    - meeting_id: RPM-2027-01
+      decision_date: 2027-01-26
+      source: "Polymarket rules ('scheduled for January 26, 2027')"
+      confirmed: false
+    - meeting_id: RPM-2027-03
+      decision_date: 2027-03-30
+      source: "Polymarket rules ('scheduled for March 30, 2027')"
+      confirmed: false
 fomc:
   timezone: America/New_York
   meetings: []

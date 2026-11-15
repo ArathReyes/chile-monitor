@@ -73,11 +73,21 @@ class SourcesConfig(BaseModel):
 
 
 class Meeting(BaseModel):
+    meeting_id: str
     decision_date: date
+    start_date: date | None = None
+    decision_time_local: str | None = None
     effective_date: date | None = None
-    announcement_time: str | None = None
-    ipom: bool = False
-    notes: str = ""
+    has_ipom: bool = False
+    source: str = ""
+    confirmed: bool = False
+
+    @property
+    def effective(self) -> date:
+        """Effective date: explicit, else the next Chilean business day after the decision."""
+        from monitor.cl_calendar import next_business_day
+
+        return self.effective_date or next_business_day(self.decision_date)
 
 
 class MeetingCalendar(BaseModel):
